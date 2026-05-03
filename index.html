@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スタッフポータル — 下呂観光ホテル</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f4f2ed;
+    --bg-card: #ffffff;
+    --bg-secondary: #f0ede8;
+    --text-primary: #1a1a1a;
+    --text-secondary: #5a5a5a;
+    --text-tertiary: #8a8a8a;
+    --border: rgba(0,0,0,0.12);
+    --border-med: rgba(0,0,0,0.22);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --header-bg: #1a2332;
+    --header-text: #e8ecf0;
+    --font: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141414;
+      --bg-card: #1e1e1e;
+      --bg-secondary: #252525;
+      --text-primary: #e8e8e8;
+      --text-secondary: #aaaaaa;
+      --text-tertiary: #666666;
+      --border: rgba(255,255,255,0.10);
+      --border-med: rgba(255,255,255,0.18);
+    }
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+  }
+
+  #app {
+    width: 100%;
+    max-width: 640px;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  }
+
+  .header {
+    background: var(--header-bg);
+    color: var(--header-text);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header-icon {
+    width: 32px; height: 32px;
+    background: #2d5a8e;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .header h1 { font-size: 15px; font-weight: 500; margin-bottom: 2px; }
+  .header-sub { font-size: 11px; color: #8fa3bb; }
+
+  .section-label {
+    padding: 14px 20px 8px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--bg-secondary);
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .tool-list {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .tool-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-med);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .tool-card:hover {
+    background: var(--bg-secondary);
+  }
+
+  .tool-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .icon-red    { background: #FCEBEB; }
+  .icon-green  { background: #E1F5EE; }
+  .icon-blue   { background: #E6F1FB; }
+  .icon-amber  { background: #FAEEDA; }
+
+  .tool-body { flex: 1; min-width: 0; }
+  .tool-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+  }
+  .tool-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .tool-arrow {
+    color: var(--text-tertiary);
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .footer {
+    margin-top: 20px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 0 0 40px; }
+    #app { border-radius: 0; border-left: none; border-right: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="header">
+    <div class="header-icon">🏨</div>
+    <div>
+      <h1>スタッフポータル</h1>
+      <div class="header-sub">下呂観光ホテル — 業務支援ツール</div>
+    </div>
+  </div>
+
+  <div class="section-label">緊急・安全対応</div>
+  <div class="tool-list">
+    <a class="tool-card" href="emergency_flow.html">
+      <div class="tool-icon icon-red">🚨</div>
+      <div class="tool-body">
+        <div class="tool-name">緊急時対応フロー</div>
+        <div class="tool-desc">警察・救急・クレームなど、状況を選ぶと対応手順が表示されます</div>
+      </div>
+      <div class="tool-arrow">›</div>
+    </a>
+  </div>
+
+  <div class="section-label">衛生管理</div>
+  <div class="tool-list">
+    <a class="tool-card" href="haccp.html">
+      <div class="tool-icon icon-green">🍽️</div>
+      <div class="tool-body">
+        <div class="tool-name">HACCP衛生管理記録</div>
+        <div class="tool-desc">重要管理・一般衛生管理の日次記録。気づいたことを入力してください</div>
+      </div>
+      <div class="tool-arrow">›</div>
+    </a>
+  </div>
+
+  <div class="section-label">書類ダウンロード</div>
+  <div class="tool-list">
+    <a class="tool-card" href="車両運行記録チェック表_v1.pdf" download>
+      <div class="tool-icon icon-amber">🚗</div>
+      <div class="tool-body">
+        <div class="tool-name">車両運行記録チェック表</div>
+        <div class="tool-desc">日次の手書き記録用雛形（PDF）</div>
+      </div>
+      <div class="tool-arrow">↓</div>
+    </a>
+    <div class="tool-card" style="opacity:0.38;cursor:not-allowed;">
+      <div class="tool-icon icon-blue">📋</div>
+      <div class="tool-body">
+        <div class="tool-name">会社車両利用申請書</div>
+        <div class="tool-desc">通勤・業務・一時利用の申請書（Word）— 準備中</div>
+      </div>
+      <div class="tool-arrow">↓</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  下呂観光ホテル スタッフポータル<br>
+  困ったことは責任者に確認してください
+</div>
+
+</body>
+</html>
