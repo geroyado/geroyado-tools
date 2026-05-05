@@ -262,15 +262,16 @@
         return d.toLocaleString('ja-JP', { month:'long', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit' });
       };
 
-      list.innerHTML = data.items.map(ev => `
-        <div class="tool-card" style="cursor:default;">
-          <div class="tool-icon icon-blue">📅</div>
-          <div class="tool-body">
-            <div class="tool-name">${ev.summary || '（タイトルなし）'}</div>
-            <div class="tool-desc">${fmt(ev.start)}</div>
-          </div>
+      list.innerHTML = `<div style="padding:4px 0;">` + data.items.map(ev => `
+        <div style="
+          display:flex; gap:12px; align-items:baseline;
+          padding:8px 0; border-bottom:0.5px solid var(--border);
+          font-size:13px; color:var(--text-primary);
+        ">
+          <span style="color:var(--text-tertiary); font-size:12px; white-space:nowrap; flex-shrink:0;">${fmt(ev.start)}</span>
+          <span>${ev.summary || '（タイトルなし）'}</span>
         </div>
-      `).join('');
+      `).join('') + `</div>`;
     } catch(e) {
       document.getElementById('calendar-loading').innerText = '予定の読み込みに失敗しました';
     }
