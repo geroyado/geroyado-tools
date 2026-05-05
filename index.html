@@ -173,15 +173,6 @@
 
   <div class="section-label">来館予定（今後3日間）</div>
   <div class="tool-list">
-    <div id="calendar-signin" style="display:none;">
-      <button onclick="handleSignIn()" style="
-        width:100%; padding:12px; border:0.5px solid var(--border-med);
-        border-radius:var(--radius-md); background:var(--bg-card);
-        color:var(--text-primary); font-family:var(--font);
-        font-size:13px; cursor:pointer;">
-        Googleアカウントでサインイン
-      </button>
-    </div>
     <div id="calendar-loading" style="padding:12px 0; font-size:12px; color:var(--text-tertiary);">読み込み中…</div>
     <div id="calendar-list"></div>
   </div>
@@ -241,79 +232,51 @@
   困ったことは責任者に確認してください
 </div>
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-  const CLIENT_ID = '922323774287-cjq71fnoqjl0b8fjiif6qi10lejr42r5.apps.googleusercontent.com';
+  const API_KEY = 'AIzaSyAnDi54uk6JE4p3wIaIO9Y44b59hp1lEqM';
   const CALENDAR_ID = '596af2a452b059be6b09ee59ef7d5e66d812f85c00d30a91e5aabdd694dc1e25@group.calendar.google.com';
-  const SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
-
-  let accessToken = null;
-
-  function handleSignIn() {
-    const client = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPE,
-      callback: (response) => {
-        if (response.access_token) {
-          accessToken = response.access_token;
-          fetchEvents();
-        }
-      }
-    });
-    client.requestAccessToken();
-  }
 
   async function fetchEvents() {
-    document.getElementById('calendar-loading').style.display = 'block';
-    document.getElementById('calendar-signin').style.display = 'none';
-
     const now = new Date();
     const end = new Date();
     end.setDate(now.getDate() + 3);
 
     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events?` +
-      `timeMin=${now.toISOString()}&timeMax=${end.toISOString()}&singleEvents=true&orderBy=startTime`;
+      `key=${API_KEY}&timeMin=${now.toISOString()}&timeMax=${end.toISOString()}&singleEvents=true&orderBy=startTime`;
 
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    const data = await res.json();
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
 
-    document.getElementById('calendar-loading').style.display = 'none';
-    const list = document.getElementById('calendar-list');
+      document.getElementById('calendar-loading').style.display = 'none';
+      const list = document.getElementById('calendar-list');
 
-    if (!data.items || data.items.length === 0) {
-      list.innerHTML = `<div style="font-size:12px;color:var(--text-tertiary);padding:8px 0;">今後3日間の予定はありません</div>`;
-      return;
-    }
+      if (!data.items || data.items.length === 0) {
+        list.innerHTML = `<div style="font-size:12px;color:var(--text-tertiary);padding:8px 0;">今後3日間の予定はありません</div>`;
+        return;
+      }
 
-    const fmt = (dt) => {
-      const d = new Date(dt.dateTime || dt.date);
-      if (dt.date) return d.toLocaleDateString('ja-JP', { month:'long', day:'numeric', weekday:'short' });
-      return d.toLocaleString('ja-JP', { month:'long', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit' });
-    };
+      const fmt = (dt) => {
+        const d = new Date(dt.dateTime || dt.date);
+        if (dt.date) return d.toLocaleDateString('ja-JP', { month:'long', day:'numeric', weekday:'short' });
+        return d.toLocaleString('ja-JP', { month:'long', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit' });
+      };
 
-    list.innerHTML = data.items.map(ev => `
-      <div class="tool-card" style="cursor:default;">
-        <div class="tool-icon icon-blue">📅</div>
-        <div class="tool-body">
-          <div class="tool-name">${ev.summary || '（タイトルなし）'}</div>
-          <div class="tool-desc">${fmt(ev.start)}</div>
+      list.innerHTML = data.items.map(ev => `
+        <div class="tool-card" style="cursor:default;">
+          <div class="tool-icon icon-blue">📅</div>
+          <div class="tool-body">
+            <div class="tool-name">${ev.summary || '（タイトルなし）'}</div>
+            <div class="tool-desc">${fmt(ev.start)}</div>
+          </div>
         </div>
-      </div>
-    `).join('');
+      `).join('');
+    } catch(e) {
+      document.getElementById('calendar-loading').innerText = '予定の読み込みに失敗しました';
+    }
   }
 
-  window.addEventListener('load', () => {
-    // GSIライブラリ読み込み後に自動サインイン試行
-    const check = setInterval(() => {
-      if (typeof google !== 'undefined' && google.accounts) {
-        clearInterval(check);
-        document.getElementById('calendar-loading').style.display = 'none';
-        document.getElementById('calendar-signin').style.display = 'block';
-      }
-    }, 200);
-  });
+  window.addEventListener('load', fetchEvents);
 </script>
 </body>
 </html>
