@@ -157,10 +157,18 @@
 <div id="app">
   <div class="header">
     <div class="header-icon">🏨</div>
-    <div>
+    <div style="flex:1;">
       <h1>スタッフポータル</h1>
       <div class="header-sub">下呂観光ホテル — 業務支援ツール</div>
     </div>
+    <a href="emergency_flow.html" style="
+      display:flex; align-items:center; gap:6px;
+      background:#c0392b; color:#fff;
+      padding:8px 12px; border-radius:8px;
+      text-decoration:none; font-size:12px; font-weight:600;
+      letter-spacing:0.03em; flex-shrink:0;
+      box-shadow: 0 2px 8px rgba(192,57,43,0.5);
+    ">🚨 緊急対応</a>
   </div>
 
   <div class="section-label">来館予定（今後3日間）</div>
@@ -176,18 +184,6 @@
     </div>
     <div id="calendar-loading" style="padding:12px 0; font-size:12px; color:var(--text-tertiary);">読み込み中…</div>
     <div id="calendar-list"></div>
-  </div>
-
-  <div class="section-label">緊急・安全対応</div>
-  <div class="tool-list">
-    <a class="tool-card" href="emergency_flow.html">
-      <div class="tool-icon icon-red">🚨</div>
-      <div class="tool-body">
-        <div class="tool-name">緊急時対応フロー</div>
-        <div class="tool-desc">警察・救急・クレームなど、状況を選ぶと対応手順が表示されます</div>
-      </div>
-      <div class="tool-arrow">›</div>
-    </a>
   </div>
 
   <div class="section-label">衛生管理</div>
