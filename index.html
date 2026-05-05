@@ -259,8 +259,7 @@
       const fmt = (dt) => {
         const d = new Date(dt.dateTime || dt.date);
         if (dt.date) {
-          const date = d.toLocaleDateString('ja-JP', { month:'long', day:'numeric', weekday:'short' });
-          return `${date}<span style="visibility:hidden;">00:00</span>`;
+          return d.toLocaleDateString('ja-JP', { month:'long', day:'numeric', weekday:'short' });
         }
         return d.toLocaleString('ja-JP', { month:'long', day:'numeric', weekday:'short', hour:'2-digit', minute:'2-digit' });
       };
@@ -271,7 +270,7 @@
           padding:8px 0; border-bottom:0.5px solid var(--border);
           font-size:13px; color:var(--text-primary);
         ">
-          <span style="color:var(--text-tertiary); font-size:12px; white-space:nowrap; flex-shrink:0; width:140px; display:inline-block;">${fmt(ev.start)}</span>
+          <span style="color:var(--text-tertiary); font-size:12px; white-space:nowrap; flex-shrink:0; width:100px; display:inline-block;">${fmt(ev.start)}</span>
           <span>${ev.summary || '（タイトルなし）'}</span>
         </div>
       `).join('') + `</div>`;
