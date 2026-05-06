@@ -209,6 +209,18 @@
     </a>
   </div>
 
+  <div class="section-label">経営レポート</div>
+  <div class="tool-list">
+    <a class="tool-card" href="docs/report/月次概況_202604.pdf" target="_blank" rel="noopener">
+      <div class="tool-icon" style="background:#EEE8F5;">📊</div>
+      <div class="tool-body">
+        <div class="tool-name">月次概況</div>
+        <div class="tool-desc" id="report-caption">読み込み中…</div>
+      </div>
+      <div class="tool-arrow">›</div>
+    </a>
+  </div>
+
   <div class="section-label">書類ダウンロード — フロント業務</div>
   <div class="tool-list">
     <a class="tool-card" href="docs/front/ウエイティングリスト.pdf" download>
@@ -320,6 +332,24 @@
   }
 
   window.addEventListener('load', fetchEvents);
+
+  // 月次概況キャプション：ファイル名から作成年月を生成
+  (function() {
+    const anchor = document.querySelector('a[href*="月次概況"]');
+    if (!anchor) return;
+    const href = anchor.getAttribute('href');
+    const m = href.match(/月次概況_(\d{4})(\d{2})\.pdf/);
+    const cap = document.getElementById('report-caption');
+    if (m) {
+      const year = parseInt(m[1], 10);
+      const month = parseInt(m[2], 10);
+      // 会計年度は11月始まり：月が11〜12なら前年度、1〜10なら当年度
+      const fiscalYear = (month >= 11) ? year : year - 1;
+      cap.textContent = `${fiscalYear}年度 ${month}月度版（11月〜${month}月）`;
+    } else {
+      cap.textContent = '最新の月次概況レポートを表示します';
+    }
+  })();
 </script>
 </body>
 </html>
