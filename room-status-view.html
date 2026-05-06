@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>客室状況 — 閲覧用</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hiragino Kaku Gothic Pro', Meiryo, sans-serif; }
+.app { width: 100%; padding: 6px 10px; }
+.header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.title { font-size: 20px; font-weight: 700; color: #222; }
+.view-badge { font-size: 10px; background: #F0F0F0; color: #666; border: 1px solid #CCC; border-radius: 4px; padding: 2px 6px; }
+.sync-status { font-size: 10px; color: #999; margin-left: auto; }
+.sync-status.ok { color: #00A040; }
+.sync-status.err { color: #CC3300; }
+.legend { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
+.legend-item { display: flex; align-items: center; gap: 3px; font-size: 13px; color: #444; }
+.legend-dot { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+.floor { margin-bottom: 6px; }
+.floor-label { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 4px; }
+.rooms { display: flex; gap: 7px; width: 100%; padding: 0 10px; }
+.room-wrapper { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; }
+.room-wrapper.blank { flex: 1; }
+.room-sep { width: 14px; flex-shrink: 0; }
+.room {
+  width: 100%; aspect-ratio: 1.3 / 1;
+  border-radius: 5px 5px 0 0; border: 2px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  user-select: none; cursor: default;
+}
+.room-number { font-size: clamp(12px, 2vw, 18px); font-weight: 500; }
+.room-number.cabin-label { font-size: clamp(11px, 1.5vw, 14px); }
+.sub-bar {
+  width: 100%; height: clamp(20px, 2.8vh, 28px);
+  border-radius: 0 0 4px 4px;
+  display: flex; align-items: center; justify-content: center;
+  user-select: none; cursor: default;
+  font-size: clamp(11px, 1.3vw, 13px); font-weight: 500;
+  border: 1.5px solid transparent; border-top: none;
+}
+.sub-empty     { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.08); }
+.sub-noshi     { background: #FFF0B0; border-color: #DDB800; color: #7A5800; }
+.sub-breakfast { background: #FFF0B0; border-color: #DDB800; color: #7A5800; }
+.sub-check     { background: #FFE0C0; border-color: #E07820; color: #804000; }
+.sub-clean     { background: #E0F0FF; border-color: #60A8E0; color: #004080; }
+.s-unused     { background: #555; border-color: #333; }
+.s-unused .room-number { color: #fff; }
+.s-unoccupied { background: #AAA; border-color: #888; }
+.s-unoccupied .room-number { color: #fff; }
+.s-staying    { background: #FF3B3B; border-color: #CC0000; }
+.s-staying .room-number { color: #fff; }
+.s-h8         { background: #FFD600; border-color: #C8A800; }
+.s-h8 .room-number { color: #5A4000; }
+.s-h9         { background: #00C040; border-color: #008A2C; }
+.s-h9 .room-number { color: #fff; }
+.s-inroom     { background: #fff; border-color: #BBB; }
+.s-inroom .room-number { color: #333; }
+.s-out        { background: #0090FF; border-color: #0060C0; }
+.s-out .room-number { color: #fff; }
+.memo-section { margin-top: 6px; }
+.memo-title { font-size: 11px; font-weight: 500; color: #888; margin-bottom: 4px; }
+.memo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.memo-cell {
+  border: 1px solid #D0D0D0; border-radius: 3px;
+  padding: 3px 6px; font-size: 17px; min-height: 30px;
+  background: #FFFEF5; color: #333; line-height: 1.4;
+  white-space: pre-wrap; word-break: break-all;
+}
+.memo-cell:empty::before { content: '　'; color: transparent; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <span class="title">客室状況</span>
+    <span class="view-badge">閲覧用</span>
+    <span class="sync-status" id="syncStatus">接続中...</span>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#555"></div>未利用</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#AAA"></div>未着</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#FFD600"></div>朝食8時</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#00C040"></div>朝食9時</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#fff;border:1.5px solid #BBB"></div>在室</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#FF3B3B"></div>連泊</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0090FF"></div>チェックアウト済</div>
+  </div>
+  <div id="floors"></div>
+  <div class="memo-section">
+    <div class="memo-title">連絡事項</div>
+    <div class="memo-grid" id="memoGrid"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+const firebaseConfig = {
+  databaseURL: 'https://gero-room-status-default-rtdb.asia-southeast1.firebasedatabase.app'
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+const FLOORS = [
+  { label: '4階', rooms: [401,402,403,405,406,407,408,410,411,412] },
+  { label: '3階', rooms: [301,302,303,305,306,307,308,310,311,312] },
+  { label: '2階', rooms: [201,202,203,205,206,207,208,210,'gap','cabin'] }
+];
+const SUB_LABELS={'':'',noshi:'素泊まり',breakfast:'1泊朝食',check:'確認',clean:'清掃可能'};
+const allRooms=[];
+FLOORS.forEach(f=>f.rooms.forEach(r=>{if(!['202','gap','cabin'].includes(String(r)))allRooms.push(String(r));}));
+allRooms.push('cabin');
+
+const state={};
+allRooms.forEach(r=>{state[r]={status:'unused',sub:''};});
+
+const syncEl=document.getElementById('syncStatus');
+
+// Firebase購読（読み取りのみ）
+onValue(ref(db,'rooms'), snap=>{
+  const data=snap.val()||{};
+  allRooms.forEach(r=>{
+    if(data[r]){state[r].status=data[r].status||'unused';state[r].sub=data[r].sub||'';}
+    renderRoom(r);
+  });
+  syncEl.textContent='● 同期中';
+  syncEl.className='sync-status ok';
+},err=>{
+  syncEl.textContent='● 接続エラー';
+  syncEl.className='sync-status err';
+});
+
+onValue(ref(db,'memo'), snap=>{
+  const data=snap.val()||{};
+  for(let i=0;i<14;i++){
+    const el=document.getElementById('memo-'+i);
+    if(el) el.textContent=data[i]||'';
+  }
+});
+
+function renderRoom(r){
+  const roomEl=document.getElementById('room-'+r),subEl=document.getElementById('sub-'+r);
+  if(!roomEl)return;
+  const s=state[r];
+  roomEl.className='room s-'+s.status;
+  subEl.className='sub-bar '+(s.sub?'sub-'+s.sub:'sub-empty');
+  subEl.textContent=SUB_LABELS[s.sub]||'';
+}
+function makeRoom(r,label,small){
+  const wrapper=document.createElement('div');wrapper.className='room-wrapper';
+  const roomEl=document.createElement('div');roomEl.className='room s-unused';roomEl.id='room-'+r;
+  const span=document.createElement('span');span.className='room-number'+(small?' cabin-label':'');span.textContent=label;
+  roomEl.appendChild(span);
+  const subEl=document.createElement('div');subEl.className='sub-bar sub-empty';subEl.id='sub-'+r;
+  wrapper.appendChild(roomEl);wrapper.appendChild(subEl);
+  return wrapper;
+}
+function renderAll(){
+  const container=document.getElementById('floors');container.innerHTML='';
+  FLOORS.forEach(f=>{
+    const floorDiv=document.createElement('div');floorDiv.className='floor';
+    floorDiv.innerHTML=`<div class="floor-label">${f.label}</div>`;
+    const rowEl=document.createElement('div');rowEl.className='rooms';
+    f.rooms.forEach(r=>{
+      if(r==='gap'){const g=document.createElement('div');g.className='room-wrapper blank';rowEl.appendChild(g);}
+      else if(r==='cabin'){rowEl.appendChild(makeRoom('cabin','キャビン',true));}
+      else if(String(r)==='202'){const b=document.createElement('div');b.className='room-wrapper blank';rowEl.appendChild(b);}
+      else{
+        rowEl.appendChild(makeRoom(String(r),String(r),false));
+        if(String(r).endsWith('5')){const sep=document.createElement('div');sep.className='room-sep';rowEl.appendChild(sep);}
+      }
+    });
+    floorDiv.appendChild(rowEl);container.appendChild(floorDiv);
+  });
+}
+function buildMemo(){
+  const grid=document.getElementById('memoGrid');
+  for(let i=0;i<14;i++){
+    const div=document.createElement('div');div.className='memo-cell';div.id='memo-'+i;
+    grid.appendChild(div);
+  }
+}
+renderAll();buildMemo();
+</script>
+</body>
+</html>
