@@ -19,6 +19,7 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
   user-select: none; width: 130px; text-align: center; padding: 7px 0;
 }
 .btn-reset { border-color: #999; background: #fff; color: #555; width: auto; padding: 7px 14px; }
+.btn-unoccupied { border-color: #888; background: #EEEEEE; color: #444; width: auto; padding: 7px 14px; }
 .divider { width: 1px; height: 20px; background: #ddd; margin: 0 2px; }
 .mode-banner-wrap { height: 24px; margin-bottom: 6px; border-radius: 6px; overflow: hidden; position: relative; }
 .mode-banner {
@@ -61,9 +62,10 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
 .sub-breakfast { background: #FFF0B0; border-color: #DDB800; color: #7A5800; }
 .sub-check     { background: #FFE0C0; border-color: #E07820; color: #804000; }
 .sub-clean     { background: #E0F0FF; border-color: #60A8E0; color: #004080; }
-.s-unused     { background: #555; border-color: #333; }
+.sub-noaccess  { background: #FF3B3B; border-color: #CC0000; color: #fff; }
+.s-unused     { background: #AAA; border-color: #888; }
 .s-unused .room-number { color: #fff; }
-.s-unoccupied { background: #AAA; border-color: #888; }
+.s-unoccupied { background: #555; border-color: #333; }
 .s-unoccupied .room-number { color: #fff; }
 .s-staying    { background: #FF3B3B; border-color: #CC0000; }
 .s-staying .room-number { color: #fff; }
@@ -77,7 +79,8 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
 .s-out .room-number { color: #fff; }
 .memo-section { margin-top: 6px; }
 .memo-title { font-size: 11px; font-weight: 500; color: #888; margin-bottom: 4px; }
-.memo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.memo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.memo-col { display: flex; flex-direction: column; gap: 3px; }
 .memo-cell {
   border: 1px solid #D0D0D0; border-radius: 3px;
   padding: 3px 6px; font-size: 17px; height: 30px;
@@ -111,6 +114,7 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
     <span class="sync-status" id="syncStatus">接続中...</span>
     <div class="mode-btns">
       <div class="mode-btn btn-reset" id="btnReset">リセット</div>
+      <div class="mode-btn btn-unoccupied" id="btnUnoccupied">一括未着</div>
       <div class="divider"></div>
       <div class="mode-btn btn-prep"    id="btnPrep">準備モード</div>
       <div class="mode-btn btn-checkin" id="btnIn">チェックインモード</div>
@@ -123,8 +127,8 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
     <div class="mode-banner banner-out"  id="bannerOut">チェックアウトモード ON — チェックアウト済 → 在室 → 未利用</div>
   </div>
   <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#555"></div>未利用</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#AAA"></div>未着</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#AAA"></div>未利用</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#555"></div>未着</div>
     <div class="legend-item"><div class="legend-dot" style="background:#FFD600"></div>朝食8時</div>
     <div class="legend-item"><div class="legend-dot" style="background:#00C040"></div>朝食9時</div>
     <div class="legend-item"><div class="legend-dot" style="background:#fff;border:1.5px solid #BBB"></div>在室</div>
@@ -133,8 +137,16 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
   </div>
   <div id="floors"></div>
   <div class="memo-section">
-    <div class="memo-title">連絡事項</div>
-    <div class="memo-grid" id="memoGrid"></div>
+    <div class="memo-grid">
+      <div>
+        <div class="memo-title">連絡事項</div>
+        <div class="memo-col" id="memoLeft"></div>
+      </div>
+      <div>
+        <div class="memo-title">引き継ぎ事項</div>
+        <div class="memo-col" id="memoRight"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -168,8 +180,8 @@ const NORMAL_CYCLE  =['unused','unoccupied','h8','h9','inroom','staying','out'];
 const PREP_CYCLE    =['unoccupied','staying','unused'];
 const CHECKIN_CYCLE =['h8','h9','inroom','unoccupied'];
 const CHECKOUT_CYCLE=['out','inroom','unused'];
-const SUB_CYCLE=['','noshi','breakfast','check','clean'];
-const SUB_LABELS={'':'',noshi:'素泊まり',breakfast:'1泊朝食',check:'確認',clean:'清掃可能'};
+const SUB_CYCLE=['','noshi','breakfast','check','clean','noaccess'];
+const SUB_LABELS={'':'',noshi:'素泊まり',breakfast:'1泊朝食',check:'確認',clean:'清掃可能',noaccess:'入室禁止'};
 
 const allRooms=[];
 FLOORS.forEach(f=>f.rooms.forEach(r=>{if(!['202','gap','cabin'].includes(String(r)))allRooms.push(String(r));}));
@@ -179,7 +191,7 @@ const state={};
 allRooms.forEach(r=>{state[r]={status:'unused',sub:''};});
 const memoState=Array(14).fill('');
 let mode=null;
-let memoTimers=Array(14).fill(null);
+let memoTimers={};
 
 // Firebase接続状態
 const syncEl=document.getElementById('syncStatus');
@@ -202,22 +214,31 @@ onValue(roomsRef, snap=>{
   syncEl.className='sync-status err';
 });
 
-const memoRef=ref(db,'memo');
+const memoRef=ref(db,'memo_left');
 onValue(memoRef, snap=>{
   const data=snap.val()||{};
-  for(let i=0;i<14;i++){
-    const ta=document.getElementById('memo-'+i);
-    if(ta && document.activeElement!==ta){
-      ta.value=data[i]||'';
-    }
+  for(let i=0;i<7;i++){
+    const ta=document.getElementById('memo-left-'+i);
+    if(ta && document.activeElement!==ta) ta.value=data['left_'+i]||'';
+  }
+});
+onValue(ref(db,'memo_right'), snap=>{
+  const data=snap.val()||{};
+  for(let i=0;i<7;i++){
+    const ta=document.getElementById('memo-right-'+i);
+    if(ta && document.activeElement!==ta) ta.value=data['right_'+i]||'';
   }
 });
 
 function writeRoom(r){
   update(ref(db,'rooms/'+r),{status:state[r].status,sub:state[r].sub});
 }
-function writeMemo(i,val){
-  update(ref(db,'memo'),{[i]:val});
+function writeMemoLeft(i,val){ update(ref(db,'memo_left'),{['left_'+i]:val}); }
+function writeMemoRight(i,val){ update(ref(db,'memo_right'),{['right_'+i]:val}); }
+function doUnoccupied(){
+  const updates={};
+  allRooms.forEach(r=>{state[r].status='unoccupied';updates['rooms/'+r]={status:'unoccupied',sub:state[r].sub};renderRoom(r);});
+  update(ref(db),updates);
 }
 
 function setBtn(el,bg,color,border){el.style.background=bg;el.style.color=color;el.style.borderColor=border;}
@@ -233,11 +254,11 @@ function toggleMode(m){
 function doReset(){
   const updates={};
   allRooms.forEach(r=>{state[r]={status:'unused',sub:''};updates['rooms/'+r]={status:'unused',sub:''};renderRoom(r);});
-  const emptyMemo={};
-  for(let i=0;i<14;i++){emptyMemo[i]='';}
-  updates['memo']=emptyMemo;
+  const emptyLeft={};
+  for(let i=0;i<7;i++){emptyLeft['left_'+i]='';}
+  updates['memo_left']=emptyLeft;
   update(ref(db),updates);
-  for(let i=0;i<14;i++){const ta=document.getElementById('memo-'+i);if(ta)ta.value='';}
+  for(let i=0;i<7;i++){const ta=document.getElementById('memo-left-'+i);if(ta)ta.value='';}
   document.getElementById('confirmOverlay').classList.remove('open');
 }
 function clickRoom(r){
@@ -295,6 +316,7 @@ function renderAll(){
     floorDiv.appendChild(rowEl);container.appendChild(floorDiv);
   });
   document.getElementById('btnReset').addEventListener('click',()=>document.getElementById('confirmOverlay').classList.add('open'));
+  document.getElementById('btnUnoccupied').addEventListener('click',doUnoccupied);
   document.getElementById('btnPrep').addEventListener('click',()=>toggleMode('prep'));
   document.getElementById('btnIn').addEventListener('click',()=>toggleMode('in'));
   document.getElementById('btnOut').addEventListener('click',()=>toggleMode('out'));
@@ -302,14 +324,38 @@ function renderAll(){
   document.getElementById('confirmCancel').addEventListener('click',()=>document.getElementById('confirmOverlay').classList.remove('open'));
 }
 function buildMemo(){
-  const grid=document.getElementById('memoGrid');
-  for(let i=0;i<14;i++){
-    const ta=document.createElement('textarea');ta.className='memo-cell';ta.rows=1;ta.id='memo-'+i;
+  const left=document.getElementById('memoLeft');
+  const right=document.getElementById('memoRight');
+  function makeCell(id, writeFn, withDate){
+    const ta=document.createElement('textarea');ta.className='memo-cell';ta.rows=1;ta.id=id;
+    let stamped=false;
+    ta.addEventListener('focus',()=>{ stamped=false; });
     ta.addEventListener('input',()=>{
-      clearTimeout(memoTimers[i]);
-      memoTimers[i]=setTimeout(()=>writeMemo(i,ta.value),500);
+      if(!stamped && ta.value.length>0){
+        const now=new Date();
+        const hh=String(now.getHours()).padStart(2,'0');
+        const mm=String(now.getMinutes()).padStart(2,'0');
+        let stamp;
+        if(withDate){
+          const mo=String(now.getMonth()+1).padStart(2,'0');
+          const dd=String(now.getDate()).padStart(2,'0');
+          stamp='['+mo+'/'+dd+' '+hh+':'+mm+'] ';
+        } else {
+          stamp='['+hh+':'+mm+'] ';
+        }
+        ta.value=stamp+ta.value;
+        stamped=true;
+      }
+      clearTimeout(memoTimers[id]);
+      memoTimers[id]=setTimeout(()=>writeFn(ta.value),500);
     });
-    grid.appendChild(ta);
+    return ta;
+  }
+  for(let i=0;i<7;i++){
+    left.appendChild(makeCell('memo-left-'+i, val=>writeMemoLeft(i,val), false));
+  }
+  for(let i=0;i<7;i++){
+    right.appendChild(makeCell('memo-right-'+i, val=>writeMemoRight(i,val), true));
   }
 }
 renderAll();buildMemo();
