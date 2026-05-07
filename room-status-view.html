@@ -44,9 +44,10 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
 .sub-breakfast { background: #FFF0B0; border-color: #DDB800; color: #7A5800; }
 .sub-check     { background: #FFE0C0; border-color: #E07820; color: #804000; }
 .sub-clean     { background: #E0F0FF; border-color: #60A8E0; color: #004080; }
-.s-unused     { background: #555; border-color: #333; }
+.sub-noaccess  { background: #FF3B3B; border-color: #CC0000; color: #fff; }
+.s-unused     { background: #AAA; border-color: #888; }
 .s-unused .room-number { color: #fff; }
-.s-unoccupied { background: #AAA; border-color: #888; }
+.s-unoccupied { background: #555; border-color: #333; }
 .s-unoccupied .room-number { color: #fff; }
 .s-staying    { background: #FF3B3B; border-color: #CC0000; }
 .s-staying .room-number { color: #fff; }
@@ -60,7 +61,8 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
 .s-out .room-number { color: #fff; }
 .memo-section { margin-top: 6px; }
 .memo-title { font-size: 11px; font-weight: 500; color: #888; margin-bottom: 4px; }
-.memo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.memo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.memo-col { display: flex; flex-direction: column; gap: 3px; }
 .memo-cell {
   border: 1px solid #D0D0D0; border-radius: 3px;
   padding: 3px 6px; font-size: 17px; min-height: 30px;
@@ -78,8 +80,8 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
     <span class="sync-status" id="syncStatus">接続中...</span>
   </div>
   <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#555"></div>未利用</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#AAA"></div>未着</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#AAA"></div>未利用</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#555"></div>未着</div>
     <div class="legend-item"><div class="legend-dot" style="background:#FFD600"></div>朝食8時</div>
     <div class="legend-item"><div class="legend-dot" style="background:#00C040"></div>朝食9時</div>
     <div class="legend-item"><div class="legend-dot" style="background:#fff;border:1.5px solid #BBB"></div>在室</div>
@@ -88,8 +90,16 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
   </div>
   <div id="floors"></div>
   <div class="memo-section">
-    <div class="memo-title">連絡事項</div>
-    <div class="memo-grid" id="memoGrid"></div>
+    <div class="memo-grid">
+      <div>
+        <div class="memo-title">連絡事項</div>
+        <div class="memo-col" id="memoLeft"></div>
+      </div>
+      <div>
+        <div class="memo-title">引き継ぎ事項</div>
+        <div class="memo-col" id="memoRight"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -108,7 +118,7 @@ const FLOORS = [
   { label: '3階', rooms: [301,302,303,305,306,307,308,310,311,312] },
   { label: '2階', rooms: [201,202,203,205,206,207,208,210,'gap','cabin'] }
 ];
-const SUB_LABELS={'':'',noshi:'素泊まり',breakfast:'1泊朝食',check:'確認',clean:'清掃可能'};
+const SUB_LABELS={'':'',noshi:'素泊まり',breakfast:'1泊朝食',check:'確認',clean:'清掃可能',noaccess:'入室禁止'};
 const allRooms=[];
 FLOORS.forEach(f=>f.rooms.forEach(r=>{if(!['202','gap','cabin'].includes(String(r)))allRooms.push(String(r));}));
 allRooms.push('cabin');
@@ -132,11 +142,18 @@ onValue(ref(db,'rooms'), snap=>{
   syncEl.className='sync-status err';
 });
 
-onValue(ref(db,'memo'), snap=>{
+onValue(ref(db,'memo_left'), snap=>{
   const data=snap.val()||{};
-  for(let i=0;i<14;i++){
-    const el=document.getElementById('memo-'+i);
-    if(el) el.textContent=data[i]||'';
+  for(let i=0;i<7;i++){
+    const el=document.getElementById('memo-left-'+i);
+    if(el) el.textContent=data['left_'+i]||'';
+  }
+});
+onValue(ref(db,'memo_right'), snap=>{
+  const data=snap.val()||{};
+  for(let i=0;i<7;i++){
+    const el=document.getElementById('memo-right-'+i);
+    if(el) el.textContent=data['right_'+i]||'';
   }
 });
 
@@ -176,10 +193,15 @@ function renderAll(){
   });
 }
 function buildMemo(){
-  const grid=document.getElementById('memoGrid');
-  for(let i=0;i<14;i++){
-    const div=document.createElement('div');div.className='memo-cell';div.id='memo-'+i;
-    grid.appendChild(div);
+  const left=document.getElementById('memoLeft');
+  const right=document.getElementById('memoRight');
+  for(let i=0;i<7;i++){
+    const div=document.createElement('div');div.className='memo-cell';div.id='memo-left-'+i;
+    left.appendChild(div);
+  }
+  for(let i=0;i<7;i++){
+    const div=document.createElement('div');div.className='memo-cell';div.id='memo-right-'+i;
+    right.appendChild(div);
   }
 }
 renderAll();buildMemo();
