@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>シャトルバス — 運転手用</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; min-height: 100vh;
+  background: #F0F0EC;
+  font-family: 'Hiragino Kaku Gothic Pro', Meiryo, sans-serif;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 24px 16px 48px;
+}
+.header {
+  width: 100%; max-width: 400px;
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 24px;
+}
+.title { font-size: 20px; font-weight: 700; color: #222; }
+.sync-status { font-size: 11px; margin-left: auto; }
+.sync-status.ok  { color: #00A040; }
+.sync-status.err { color: #CC3300; }
+
+.card {
+  width: 100%; max-width: 400px;
+  background: #fff; border-radius: 14px;
+  border: 0.5px solid rgba(0,0,0,0.12);
+  overflow: hidden; margin-bottom: 16px;
+}
+.card-title {
+  font-size: 12px; font-weight: 500; color: #999;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 12px 16px 8px;
+  border-bottom: 0.5px solid rgba(0,0,0,0.08);
+}
+
+/* 運行/運休 */
+.status-btn {
+  width: 100%; padding: 40px 0;
+  font-size: 28px; font-weight: 700;
+  text-align: center; cursor: pointer;
+  user-select: none; border: none; outline: none;
+  transition: filter 0.1s;
+}
+.status-btn:active { filter: brightness(0.92); }
+.status-btn.running { background: #00C040; color: #fff; }
+.status-btn.closed  { background: #AAAAAA; color: #fff; }
+
+/* 時間行 */
+.time-row {
+  display: flex; flex-direction: column;
+  padding: 16px;
+  border-bottom: 0.5px solid rgba(0,0,0,0.08);
+  gap: 10px;
+}
+.time-row:last-child { border-bottom: none; }
+.time-label {
+  font-size: 22px; font-weight: 700; color: #222;
+}
+.time-row-btns {
+  display: flex; gap: 8px;
+}
+.passenger-badge {
+  flex: 1; font-size: 16px; font-weight: 600;
+  padding: 14px 0; border-radius: 10px;
+  text-align: center;
+}
+.passenger-badge.has  { background: #FFF0B0; color: #7A5800; border: 1px solid #DDB800; }
+.passenger-badge.none { background: #EEEEEE; color: #999;    border: 1px solid #DDD; }
+.confirm-btn {
+  flex: 1;
+  font-size: 16px; font-weight: 700;
+  padding: 14px 0; border-radius: 10px;
+  text-align: center;
+  cursor: pointer; user-select: none;
+  border: none; outline: none;
+  transition: filter 0.1s;
+}
+.confirm-btn:active { filter: brightness(0.9); }
+.confirm-btn.confirmed   { background: #00C040; color: #fff; }
+.confirm-btn.unconfirmed { background: #EEEEEE; color: #888; border: 1.5px solid #CCC; }
+
+.footer {
+  margin-top: 16px;
+  font-size: 11px; color: #aaa; text-align: center;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="title">🚌 シャトルバス</span>
+  <span class="sync-status" id="syncStatus">接続中...</span>
+</div>
+
+<!-- 運行/運休 -->
+<div class="card">
+  <div class="card-title">本日の運行状況</div>
+  <div class="status-btn closed" id="statusBtn">運休</div>
+</div>
+
+<!-- 時間・確認 -->
+<div class="card" id="timesCard">
+  <div class="card-title">時間・確認</div>
+  <div class="time-row" id="row-0">
+    <span class="time-label">9:45</span>
+    <div class="time-row-btns">
+      <span class="passenger-badge none" id="badge-0">なし</span>
+      <div class="confirm-btn unconfirmed" id="conf-0">未確認</div>
+    </div>
+  </div>
+  <div class="time-row" id="row-1">
+    <span class="time-label">10:10</span>
+    <div class="time-row-btns">
+      <span class="passenger-badge none" id="badge-1">なし</span>
+      <div class="confirm-btn unconfirmed" id="conf-1">未確認</div>
+    </div>
+  </div>
+  <div class="time-row" id="row-extra">
+    <span class="time-label" style="font-size:18px;">臨時</span>
+    <div class="time-row-btns">
+      <span class="passenger-badge none" id="badge-extra">なし</span>
+      <div class="confirm-btn unconfirmed" id="conf-extra">未確認</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">下呂観光ホテル — 運転手専用画面</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+const firebaseConfig = {
+  databaseURL: 'https://gero-room-status-default-rtdb.asia-southeast1.firebasedatabase.app'
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+const syncEl = document.getElementById('syncStatus');
+
+const shuttleState = {
+  running: false,
+  times: [
+    { has: false, confirmed: false },
+    { has: false, confirmed: false }
+  ],
+  extra: { requested: false, confirmed: false }
+};
+
+function writeShuttle() {
+  update(ref(db, 'shuttle'), {
+    running: shuttleState.running,
+    times: shuttleState.times.map(t => ({ has: t.has, confirmed: t.confirmed })),
+    extra: { requested: shuttleState.extra.requested, confirmed: shuttleState.extra.confirmed }
+  });
+}
+
+function renderAll() {
+  // 運行/運休
+  const btn = document.getElementById('statusBtn');
+  btn.textContent = shuttleState.running ? '運　行' : '運　休';
+  btn.className = 'status-btn ' + (shuttleState.running ? 'running' : 'closed');
+
+  // 各時間
+  shuttleState.times.forEach((t, i) => {
+    const badge = document.getElementById('badge-' + i);
+    const conf  = document.getElementById('conf-' + i);
+    badge.textContent = t.has ? 'あり' : 'なし';
+    badge.className = 'passenger-badge ' + (t.has ? 'has' : 'none');
+    conf.textContent = t.confirmed ? '確認済' : '未確認';
+    conf.className = 'confirm-btn ' + (t.confirmed ? 'confirmed' : 'unconfirmed');
+  });
+
+  // 臨時
+  const extraBadge = document.getElementById('badge-extra');
+  const extraConf  = document.getElementById('conf-extra');
+  extraBadge.textContent = shuttleState.extra.requested ? '依頼あり' : 'なし';
+  extraBadge.className = 'passenger-badge ' + (shuttleState.extra.requested ? 'has' : 'none');
+  extraConf.textContent = shuttleState.extra.confirmed ? '確認済' : '未確認';
+  extraConf.className = 'confirm-btn ' + (shuttleState.extra.confirmed ? 'confirmed' : 'unconfirmed');
+}
+
+// Firebase購読
+onValue(ref(db, 'shuttle'), snap => {
+  const data = snap.val() || {};
+  shuttleState.running = data.running || false;
+  if (data.times) {
+    shuttleState.times.forEach((t, i) => {
+      if (data.times[i]) {
+        t.has = data.times[i].has || false;
+        t.confirmed = data.times[i].confirmed || false;
+      }
+    });
+  }
+  if (data.extra) {
+    shuttleState.extra.requested = data.extra.requested || false;
+    shuttleState.extra.confirmed = data.extra.confirmed || false;
+  }
+  renderAll();
+  syncEl.textContent = '● 同期中';
+  syncEl.className = 'sync-status ok';
+}, err => {
+  syncEl.textContent = '● 接続エラー';
+  syncEl.className = 'sync-status err';
+});
+
+// 操作イベント
+document.getElementById('statusBtn').addEventListener('click', () => {
+  shuttleState.running = !shuttleState.running;
+  renderAll(); writeShuttle();
+});
+shuttleState.times.forEach((t, i) => {
+  document.getElementById('conf-' + i).addEventListener('click', () => {
+    shuttleState.times[i].confirmed = !shuttleState.times[i].confirmed;
+    renderAll(); writeShuttle();
+  });
+});
+document.getElementById('conf-extra').addEventListener('click', () => {
+  shuttleState.extra.confirmed = !shuttleState.extra.confirmed;
+  renderAll(); writeShuttle();
+});
+</script>
+</body>
+</html>

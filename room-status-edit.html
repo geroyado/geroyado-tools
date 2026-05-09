@@ -40,6 +40,34 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
 .room-wrapper { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; }
 .room-wrapper.blank { flex: 1; }
 .room-sep { width: 14px; flex-shrink: 0; }
+/* シャトルバスボックス */
+.shuttle-box { flex: 1; min-width: 0; max-width: none; width: 0; border-radius: 6px; border: 2px solid #999; background: #F8F8F8; padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; font-size: 11px; }
+.shuttle-title {
+  font-size: 11px; font-weight: 700; color: #444;
+  text-align: center; margin-bottom: 1px;
+}
+.shuttle-status {
+  text-align: center; cursor: pointer; user-select: none;
+  font-size: 12px; font-weight: 700;
+  padding: 2px 0; border-radius: 4px;
+}
+.shuttle-status.running { background: #00C040; color: #fff; }
+.shuttle-status.closed  { background: #AAA;    color: #fff; }
+.shuttle-row {
+  display: flex; align-items: center; gap: 4px;
+  padding: 2px 0;
+}
+.shuttle-row.dimmed { opacity: 0.4; }
+.shuttle-time { font-size: 11px; font-weight: 600; color: #444; width: 36px; flex-shrink: 0; }
+.shuttle-btn {
+  flex: 1; text-align: center; cursor: pointer; user-select: none;
+  font-size: 10px; font-weight: 600;
+  padding: 2px 0; border-radius: 3px; border: 1px solid #ccc;
+}
+.shuttle-btn.has  { background: #FFD600; border-color: #C8A800; color: #5A4000; }
+.shuttle-btn.none { background: #eee;    border-color: #ccc;    color: #888; }
+.shuttle-btn.confirmed   { background: #00C040; border-color: #008A2C; color: #fff; }
+.shuttle-btn.unconfirmed { background: #eee;    border-color: #ccc;    color: #888; }
 .room {
   width: 100%; aspect-ratio: 1.3 / 1;
   border-radius: 5px 5px 0 0; border: 2px solid transparent;
@@ -173,9 +201,9 @@ const db  = getDatabase(app);
 const FLOORS = [
   { label: '4階', rooms: [401,402,403,405,406,407,408,410,411,412] },
   { label: '3階', rooms: [301,302,303,305,306,307,308,310,311,312] },
-  { label: '2階', rooms: [201,202,203,205,206,207,208,210,'gap','cabin'] }
+  { label: '2階', rooms: [201,202,203,205,206,207,208,210,'cabin','shuttle'] }
 ];
-const BLANK=['202'], SPECIAL=['gap','cabin'];
+const BLANK=['202'], SPECIAL=['gap','cabin','shuttle'];
 const NORMAL_CYCLE  =['unused','unoccupied','h8','h9','inroom','staying','out'];
 const PREP_CYCLE    =['unoccupied','staying','unused'];
 const CHECKIN_CYCLE =['h8','h9','inroom','unoccupied'];
@@ -192,6 +220,16 @@ allRooms.forEach(r=>{state[r]={status:'unused',sub:''};});
 const memoState=Array(14).fill('');
 let mode=null;
 let memoTimers={};
+
+// シャトルバス状態
+const shuttleState={
+  running: false,
+  times:[
+    {label:'9:45',  has:false, confirmed:false},
+    {label:'10:10', has:false, confirmed:false}
+  ],
+  extra: {requested:false, confirmed:false}
+};
 
 // Firebase接続状態
 const syncEl=document.getElementById('syncStatus');
@@ -214,6 +252,106 @@ onValue(roomsRef, snap=>{
   syncEl.className='sync-status err';
 });
 
+onValue(ref(db,'shuttle'), snap=>{
+  const data=snap.val()||{};
+  shuttleState.running = data.running||false;
+  if(data.times){
+    shuttleState.times.forEach((t,i)=>{
+      if(data.times[i]){
+        t.has=data.times[i].has||false;
+        t.confirmed=data.times[i].confirmed||false;
+      }
+    });
+  }
+  if(data.extra){
+    shuttleState.extra.requested=data.extra.requested||false;
+    shuttleState.extra.confirmed=data.extra.confirmed||false;
+  }
+  renderShuttle();
+});
+
+function writeShuttle(){
+  update(ref(db,'shuttle'),{
+    running: shuttleState.running,
+    times: shuttleState.times.map(t=>({has:t.has,confirmed:t.confirmed})),
+    extra: {requested:shuttleState.extra.requested, confirmed:shuttleState.extra.confirmed}
+  });
+}
+function renderShuttle(){
+  const box=document.getElementById('shuttle-box');
+  if(!box)return;
+  const st=document.getElementById('shuttle-status');
+  st.textContent=shuttleState.running?'運行':'運休';
+  st.className='shuttle-status '+(shuttleState.running?'running':'closed');
+  shuttleState.times.forEach((t,i)=>{
+    const row=document.getElementById('shuttle-row-'+i);
+    const hasBtn=document.getElementById('shuttle-has-'+i);
+    const confBtn=document.getElementById('shuttle-conf-'+i);
+    row.className='shuttle-row'+(shuttleState.running?'':' dimmed');
+    hasBtn.textContent=t.has?'あり':'なし';
+    hasBtn.className='shuttle-btn '+(t.has?'has':'none');
+    confBtn.textContent=t.confirmed?'確認':'未確認';
+    confBtn.className='shuttle-btn '+(t.confirmed?'confirmed':'unconfirmed');
+  });
+  const extraReqBtn=document.getElementById('shuttle-extra-req');
+  const extraConfBtn=document.getElementById('shuttle-extra-conf');
+  const extraRow=document.getElementById('shuttle-row-extra');
+  if(extraRow) extraRow.className='shuttle-row'+(shuttleState.running?'':' dimmed');
+  if(extraReqBtn){
+    extraReqBtn.textContent=shuttleState.extra.requested?'依頼':'なし';
+    extraReqBtn.className='shuttle-btn '+(shuttleState.extra.requested?'has':'none');
+  }
+  if(extraConfBtn){
+    extraConfBtn.textContent=shuttleState.extra.confirmed?'確認':'未確認';
+    extraConfBtn.className='shuttle-btn '+(shuttleState.extra.confirmed?'confirmed':'unconfirmed');
+  }
+}
+function makeShuttleBox(){
+  const wrapper=document.createElement('div');wrapper.className='room-wrapper';
+  const box=document.createElement('div');box.className='shuttle-box';box.id='shuttle-box';
+  box.style.cssText='width:100%;border-radius:6px;border:2px solid #999;background:#F8F8F8;padding:4px 6px;display:flex;flex-direction:column;gap:3px;font-size:11px;';
+  const title=document.createElement('div');title.className='shuttle-title';title.textContent='シャトルバス';
+  const status=document.createElement('div');status.className='shuttle-status closed';status.id='shuttle-status';status.textContent='運休';
+  status.addEventListener('click',()=>{
+    shuttleState.running=!shuttleState.running;
+    renderShuttle(); writeShuttle();
+  });
+  box.appendChild(title);box.appendChild(status);
+  shuttleState.times.forEach((t,i)=>{
+    const row=document.createElement('div');row.className='shuttle-row';row.id='shuttle-row-'+i;
+    const timeEl=document.createElement('div');timeEl.className='shuttle-time';timeEl.textContent=t.label;
+    const hasBtn=document.createElement('div');hasBtn.className='shuttle-btn none';hasBtn.id='shuttle-has-'+i;hasBtn.textContent='なし';
+    hasBtn.addEventListener('click',()=>{
+      shuttleState.times[i].has=!shuttleState.times[i].has;
+      renderShuttle(); writeShuttle();
+    });
+    const confBtn=document.createElement('div');confBtn.className='shuttle-btn unconfirmed';confBtn.id='shuttle-conf-'+i;confBtn.textContent='未確認';
+    confBtn.addEventListener('click',()=>{
+      shuttleState.times[i].confirmed=!shuttleState.times[i].confirmed;
+      renderShuttle(); writeShuttle();
+    });
+    row.appendChild(timeEl);row.appendChild(hasBtn);row.appendChild(confBtn);
+    box.appendChild(row);
+  });
+  // 臨時行
+  const extraRow=document.createElement('div');extraRow.className='shuttle-row'+(shuttleState.running?'':' dimmed');extraRow.id='shuttle-row-extra';
+  const extraLabel=document.createElement('div');extraLabel.className='shuttle-time';extraLabel.textContent='臨時';
+  const extraReqBtn=document.createElement('div');extraReqBtn.className='shuttle-btn none';extraReqBtn.id='shuttle-extra-req';extraReqBtn.textContent='なし';
+  extraReqBtn.addEventListener('click',()=>{
+    shuttleState.extra.requested=!shuttleState.extra.requested;
+    renderShuttle(); writeShuttle();
+  });
+  const extraConfBtn=document.createElement('div');extraConfBtn.className='shuttle-btn unconfirmed';extraConfBtn.id='shuttle-extra-conf';extraConfBtn.textContent='未確認';
+  extraConfBtn.addEventListener('click',()=>{
+    shuttleState.extra.confirmed=!shuttleState.extra.confirmed;
+    renderShuttle(); writeShuttle();
+  });
+  extraRow.appendChild(extraLabel);extraRow.appendChild(extraReqBtn);extraRow.appendChild(extraConfBtn);
+  box.appendChild(extraRow);
+  wrapper.appendChild(box);
+  return wrapper;
+}
+
 const memoRef=ref(db,'memo_left');
 onValue(memoRef, snap=>{
   const data=snap.val()||{};
@@ -235,10 +373,19 @@ function writeRoom(r){
 }
 function writeMemoLeft(i,val){ update(ref(db,'memo_left'),{['left_'+i]:val}); }
 function writeMemoRight(i,val){ update(ref(db,'memo_right'),{['right_'+i]:val}); }
+function resetShuttle(){
+  shuttleState.running=false;
+  shuttleState.times.forEach(t=>{t.has=false;t.confirmed=false;});
+  shuttleState.extra.requested=false;
+  shuttleState.extra.confirmed=false;
+  writeShuttle();
+  renderShuttle();
+}
 function doUnoccupied(){
   const updates={};
   allRooms.forEach(r=>{state[r].status='unoccupied';updates['rooms/'+r]={status:'unoccupied',sub:state[r].sub};renderRoom(r);});
   update(ref(db),updates);
+  resetShuttle();
 }
 
 function setBtn(el,bg,color,border){el.style.background=bg;el.style.color=color;el.style.borderColor=border;}
@@ -259,6 +406,7 @@ function doReset(){
   updates['memo_left']=emptyLeft;
   update(ref(db),updates);
   for(let i=0;i<7;i++){const ta=document.getElementById('memo-left-'+i);if(ta)ta.value='';}
+  resetShuttle();
   document.getElementById('confirmOverlay').classList.remove('open');
 }
 function clickRoom(r){
@@ -307,6 +455,7 @@ function renderAll(){
     f.rooms.forEach(r=>{
       if(r==='gap'){const g=document.createElement('div');g.className='room-wrapper blank';rowEl.appendChild(g);}
       else if(r==='cabin'){rowEl.appendChild(makeRoom('cabin','キャビン',true));}
+      else if(r==='shuttle'){rowEl.appendChild(makeShuttleBox());}
       else if(String(r)==='202'){const b=document.createElement('div');b.className='room-wrapper blank';rowEl.appendChild(b);}
       else{
         rowEl.appendChild(makeRoom(String(r),String(r),false));
@@ -328,10 +477,9 @@ function buildMemo(){
   const right=document.getElementById('memoRight');
   function makeCell(id, writeFn, withDate){
     const ta=document.createElement('textarea');ta.className='memo-cell';ta.rows=1;ta.id=id;
-    let stamped=false;
-    ta.addEventListener('focus',()=>{ stamped=false; });
-    ta.addEventListener('input',()=>{
-      if(!stamped && ta.value.length>0){
+    ta.addEventListener('keydown',(e)=>{ if(e.key==='Enter') e.preventDefault(); });
+    ta.addEventListener('blur',()=>{
+      if(ta.value.length>0 && !ta.value.startsWith('[')){
         const now=new Date();
         const hh=String(now.getHours()).padStart(2,'0');
         const mm=String(now.getMinutes()).padStart(2,'0');
@@ -340,12 +488,15 @@ function buildMemo(){
           const mo=String(now.getMonth()+1).padStart(2,'0');
           const dd=String(now.getDate()).padStart(2,'0');
           stamp='['+mo+'/'+dd+' '+hh+':'+mm+'] ';
-        } else {
+        }else{
           stamp='['+hh+':'+mm+'] ';
         }
         ta.value=stamp+ta.value;
-        stamped=true;
+        clearTimeout(memoTimers[id]);
+        memoTimers[id]=setTimeout(()=>writeFn(ta.value),100);
       }
+    });
+    ta.addEventListener('input',()=>{
       clearTimeout(memoTimers[id]);
       memoTimers[id]=setTimeout(()=>writeFn(ta.value),500);
     });
