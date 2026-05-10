@@ -309,7 +309,10 @@ function renderShuttle(){
 function makeShuttleBox(){
   const wrapper=document.createElement('div');wrapper.className='room-wrapper';
   const box=document.createElement('div');box.className='shuttle-box';box.id='shuttle-box';
-  box.style.cssText='width:100%;border-radius:6px;border:2px solid #999;background:#F8F8F8;padding:4px 6px;display:flex;flex-direction:column;gap:3px;font-size:11px;';
+  box.style.cssText='width:100%;border-radius:5px;border:2px solid #999;background:#F8F8F8;padding:3px 4px;display:flex;flex-direction:column;justify-content:space-around;font-size:11px;overflow:hidden;';
+  // 部屋(aspect-ratio 1.3/1) + サブバー(clamp(20px,2.8vh,28px)) の合計高さをJSで設定
+  wrapper.style.cssText='flex:1;min-width:0;display:flex;flex-direction:column;';
+  box.style.flex='1';
   const title=document.createElement('div');title.className='shuttle-title';title.textContent='シャトルバス';
   const status=document.createElement('div');status.className='shuttle-status closed';status.id='shuttle-status';status.textContent='運休';
   status.addEventListener('click',()=>{
@@ -333,7 +336,6 @@ function makeShuttleBox(){
     row.appendChild(timeEl);row.appendChild(hasBtn);row.appendChild(confBtn);
     box.appendChild(row);
   });
-  // 臨時行
   const extraRow=document.createElement('div');extraRow.className='shuttle-row'+(shuttleState.running?'':' dimmed');extraRow.id='shuttle-row-extra';
   const extraLabel=document.createElement('div');extraLabel.className='shuttle-time';extraLabel.textContent='臨時';
   const extraReqBtn=document.createElement('div');extraReqBtn.className='shuttle-btn none';extraReqBtn.id='shuttle-extra-req';extraReqBtn.textContent='なし';
@@ -471,6 +473,18 @@ function renderAll(){
   document.getElementById('btnOut').addEventListener('click',()=>toggleMode('out'));
   document.getElementById('confirmOk').addEventListener('click',doReset);
   document.getElementById('confirmCancel').addEventListener('click',()=>document.getElementById('confirmOverlay').classList.remove('open'));
+  // 部屋+サブバーの高さをシャトルバスに同期
+  function syncShuttleHeight(){
+    const anyRoom=document.querySelector('.room-wrapper:not(.blank) .room');
+    const anySub=document.querySelector('.room-wrapper:not(.blank) .sub-bar');
+    const shuttleBox=document.getElementById('shuttle-box');
+    if(anyRoom && anySub && shuttleBox){
+      const h=anyRoom.offsetHeight + anySub.offsetHeight;
+      shuttleBox.style.height=h+'px';
+    }
+  }
+  syncShuttleHeight();
+  window.addEventListener('resize', syncShuttleHeight);
 }
 function buildMemo(){
   const left=document.getElementById('memoLeft');
@@ -510,6 +524,28 @@ function buildMemo(){
   }
 }
 renderAll();buildMemo();
+
+// 10:30になったらシャトルバスを自動リセット
+let shuttleAutoResetDone = false;
+function checkShuttleAutoReset(){
+  const now = new Date();
+  const hh = now.getHours();
+  const mm = now.getMinutes();
+  const todayKey = now.toDateString();
+  // 10:30以降かつ本日まだリセットしていない場合
+  if(hh > 10 || (hh === 10 && mm >= 30)){
+    const lastReset = localStorage.getItem('shuttleAutoResetDate');
+    if(lastReset !== todayKey){
+      resetShuttle();
+      localStorage.setItem('shuttleAutoResetDate', todayKey);
+    }
+  } else {
+    // 10:30前になったらフラグをリセット（翌日対応）
+    localStorage.removeItem('shuttleAutoResetDate');
+  }
+}
+checkShuttleAutoReset();
+setInterval(checkShuttleAutoReset, 60000); // 1分ごとにチェック
 </script>
 </body>
 </html>
