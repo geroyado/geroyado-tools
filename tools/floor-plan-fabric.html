@@ -93,7 +93,7 @@
     background: #2c2c2e; border-top: 1px solid #3a3a3c;
     padding: 4px 14px;
     display: flex; justify-content: space-between;
-    font-size: 11px; color: #666;
+    font-size: 11px; color: #aaa;
   }
 
   #drop-zone {
@@ -386,6 +386,7 @@ canvas.on('mouse:down', opt => {
     t.enterEditing();
     t.selectAll();
     canvas.renderAll();
+    setStatus('文字を入力 → Escキーで確定');
     return;
   }
   isDrawing = true;
@@ -610,24 +611,35 @@ canvas.on('selection:cleared', updateStatus);
 canvas.on('object:modified', saveHistory);
 canvas.on('text:editing:exited', e => {
   const t = e.target;
-  // 背景ありフラグが立っていれば白矩形を後付けしてグループ化
   if (t && t.data && t.data.hasBg) {
     const pad = 6;
     t.setCoords();
+    const left = t.left - pad;
+    const top  = t.top  - pad;
+    const w = t.width  * (t.scaleX || 1) + pad * 2;
+    const h = t.height * (t.scaleY || 1) + pad * 2;
+
+    // bgはGroup内座標（中心原点）で指定
     const bg = new fabric.Rect({
-      width: t.width * (t.scaleX || 1) + pad * 2,
-      height: t.height * (t.scaleY || 1) + pad * 2,
+      left: -w / 2, top: -h / 2,
+      width: w, height: h,
       fill: '#ffffff',
       rx: 3, ry: 3,
+      originX: 'left', originY: 'top',
       selectable: false, evented: false
     });
-    // bgとtをグループ化（座標はグループの中心基準になる）
+
+    // tもGroup内座標で再配置
+    t.set({ left: -w / 2 + pad, top: -h / 2 + pad, originX: 'left', originY: 'top' });
+
     const group = new fabric.Group([bg, t], {
-      left: t.left - pad,
-      top: t.top - pad,
+      left: left + w / 2,
+      top:  top  + h / 2,
+      originX: 'center', originY: 'center',
       selectable: true,
       hasControls: true
     });
+
     canvas.remove(t);
     canvas.add(group);
     canvas.setActiveObject(group);
