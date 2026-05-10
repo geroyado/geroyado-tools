@@ -610,25 +610,29 @@ canvas.on('selection:cleared', updateStatus);
 canvas.on('object:modified', saveHistory);
 canvas.on('text:editing:exited', e => {
   const t = e.target;
-  // 背景ありフラグが立っていれば白矩形を後付け
+  // 背景ありフラグが立っていれば白矩形を後付けしてグループ化
   if (t && t.data && t.data.hasBg) {
     const pad = 6;
     t.setCoords();
     const bg = new fabric.Rect({
-      left: t.left - pad,
-      top: t.top - pad,
       width: t.width * (t.scaleX || 1) + pad * 2,
       height: t.height * (t.scaleY || 1) + pad * 2,
       fill: '#ffffff',
       rx: 3, ry: 3,
-      selectable: true,
-      evented: true,
-      data: { isBgFor: t }
+      selectable: false, evented: false
     });
-    // テキストより下のレイヤーに挿入
-    canvas.insertAt(bg, canvas.getObjects().indexOf(t));
+    // bgとtをグループ化（座標はグループの中心基準になる）
+    const group = new fabric.Group([bg, t], {
+      left: t.left - pad,
+      top: t.top - pad,
+      selectable: true,
+      hasControls: true
+    });
+    canvas.remove(t);
+    canvas.add(group);
+    canvas.setActiveObject(group);
     canvas.renderAll();
-    t.data.hasBg = false; // 2重追加を防止
+    t.data.hasBg = false;
   }
   saveHistory();
 });
