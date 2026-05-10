@@ -170,6 +170,7 @@
       <option value="38">特大</option>
     </select>
     <button id="btn-bold" class="active">B</button>
+    <button id="btn-textbg" title="文字の背後に白背景を敷く">背景</button>
   </div>
 
   <div class="sep"></div>
@@ -369,6 +370,7 @@ canvas.on('mouse:down', opt => {
   if (currentTool === 'text') {
     const size = parseInt(document.getElementById('font-size').value);
     const bold = document.getElementById('btn-bold').classList.contains('active');
+    const hasBg = document.getElementById('btn-textbg').classList.contains('active');
     const p = canvas.getPointer(opt.e);
     const t = new fabric.IText('テキスト', {
       left: p.x, top: p.y,
@@ -376,7 +378,8 @@ canvas.on('mouse:down', opt => {
       fontSize: size,
       fontWeight: bold ? 'bold' : 'normal',
       fontFamily: 'Helvetica Neue, Hiragino Sans, sans-serif',
-      selectable: true
+      selectable: true,
+      data: { hasBg }
     });
     canvas.add(t);
     canvas.setActiveObject(t);
@@ -552,8 +555,12 @@ document.addEventListener('keydown', e => {
 
 // --- ボールドトグル ---
 document.getElementById('btn-bold').addEventListener('click', () => {
-  const btn = document.getElementById('btn-bold');
-  btn.classList.toggle('active');
+  document.getElementById('btn-bold').classList.toggle('active');
+});
+
+// --- テキスト背景トグル ---
+document.getElementById('btn-textbg').addEventListener('click', () => {
+  document.getElementById('btn-textbg').classList.toggle('active');
 });
 
 // --- ロック ---
@@ -601,7 +608,30 @@ function updateStatus() {
 canvas.on('selection:created', () => setStatus('選択中 — 移動・削除できます'));
 canvas.on('selection:cleared', updateStatus);
 canvas.on('object:modified', saveHistory);
-canvas.on('text:editing:exited', saveHistory);
+canvas.on('text:editing:exited', e => {
+  const t = e.target;
+  // 背景ありフラグが立っていれば白矩形を後付け
+  if (t && t.data && t.data.hasBg) {
+    const pad = 6;
+    t.setCoords();
+    const bg = new fabric.Rect({
+      left: t.left - pad,
+      top: t.top - pad,
+      width: t.width * (t.scaleX || 1) + pad * 2,
+      height: t.height * (t.scaleY || 1) + pad * 2,
+      fill: '#ffffff',
+      rx: 3, ry: 3,
+      selectable: true,
+      evented: true,
+      data: { isBgFor: t }
+    });
+    // テキストより下のレイヤーに挿入
+    canvas.insertAt(bg, canvas.getObjects().indexOf(t));
+    canvas.renderAll();
+    t.data.hasBg = false; // 2重追加を防止
+  }
+  saveHistory();
+});
 
 
 // --- トリミング ---
