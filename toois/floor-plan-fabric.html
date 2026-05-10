@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>図面アノテーター</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Helvetica Neue', 'Hiragino Sans', sans-serif;
+    background: #1c1c1e;
+    color: #e8e8e8;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-size: 13px;
+  }
+
+  #toolbar {
+    background: #2c2c2e;
+    border-bottom: 1px solid #3a3a3c;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+
+  .sep { width: 1px; height: 26px; background: #3a3a3c; flex-shrink: 0; }
+
+  .grp { display: flex; align-items: center; gap: 6px; }
+
+  .lbl { font-size: 10px; color: #777; letter-spacing: 0.05em; white-space: nowrap; }
+
+  button {
+    background: #3a3a3c;
+    border: 1px solid #4a4a4c;
+    color: #e8e8e8;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.12s;
+    white-space: nowrap;
+  }
+  button:hover { background: #4a4a4c; }
+  button.active { background: #0a7aff; border-color: #0a7aff; color: #fff; }
+  button.green { background: #1c5c1c; border-color: #2a8a2a; }
+  button.green:hover { background: #2a8a2a; }
+  button.purple { background: #3a1c6c; border-color: #5a3aaa; }
+  button.purple:hover { background: #5a3aaa; }
+  button.red { background: #5c1c1c; border-color: #aa3a3a; }
+  button.red:hover { background: #aa3a3a; }
+
+  .swatch {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid #555;
+    cursor: pointer;
+    transition: border-color 0.12s;
+    flex-shrink: 0;
+  }
+  .swatch.active { border-color: #fff; box-shadow: 0 0 0 1px #fff; }
+
+  input[type="range"] { width: 65px; accent-color: #0a7aff; }
+  input[type="text"] {
+    background: #3a3a3c; border: 1px solid #4a4a4c;
+    color: #e8e8e8; padding: 4px 8px;
+    border-radius: 5px; font-size: 12px; width: 130px;
+  }
+  select {
+    background: #3a3a3c; border: 1px solid #4a4a4c;
+    color: #e8e8e8; padding: 4px 6px;
+    border-radius: 5px; font-size: 12px;
+  }
+
+  #canvas-container {
+    flex: 1; overflow: auto;
+    display: flex; align-items: center; justify-content: center;
+    background: #111;
+  }
+
+  #canvas-wrap { position: relative; display: inline-block; }
+
+  canvas { display: block; }
+
+  #status-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #2c2c2e; border-top: 1px solid #3a3a3c;
+    padding: 4px 14px;
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: #666;
+  }
+
+  #drop-zone {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px;
+    color: #555;
+  }
+  #drop-zone.hidden { display: none; }
+  #drop-icon { font-size: 48px; }
+  #drop-text { font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+
+  <div class="grp">
+    <button class="green" id="btn-open">📁 図面を開く</button>
+    <input type="file" id="file-input" accept="image/*" style="display:none">
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="grp">
+    <span class="lbl">ツール</span>
+    <button class="active" data-tool="select">↖ 選択</button>
+    <button data-tool="arrow">→ 矢印</button>
+    <button data-tool="line">― 直線</button>
+    <button data-tool="circle">○ 円</button>
+    <button data-tool="rect">□ 四角</button>
+    <button data-tool="text">Ａ テキスト</button>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="grp">
+    <span class="lbl">色</span>
+    <div class="swatch active" style="background:#ff3b30" data-color="#ff3b30"></div>
+    <div class="swatch" style="background:#0a7aff" data-color="#0a7aff"></div>
+    <div class="swatch" style="background:#30d158" data-color="#30d158"></div>
+    <div class="swatch" style="background:#ffd60a" data-color="#ffd60a"></div>
+    <div class="swatch" style="background:#ffffff" data-color="#ffffff"></div>
+    <div class="swatch" style="background:#1c1c1e;border-color:#888" data-color="#1c1c1e"></div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="grp">
+    <span class="lbl">太さ</span>
+    <input type="range" id="lw" min="1" max="12" value="2">
+    <span id="lw-val" style="font-size:11px;color:#888;min-width:16px">2</span>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="grp">
+    <span class="lbl">塗り</span>
+    <select id="fill-mode">
+      <option value="none">なし</option>
+      <option value="semi">半透明</option>
+      <option value="solid">塗り</option>
+    </select>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="grp">
+    <span class="lbl">テキスト</span>
+    <select id="font-size">
+      <option value="14">小</option>
+      <option value="20" selected>中</option>
+      <option value="28">大</option>
+      <option value="38">特大</option>
+    </select>
+    <button id="btn-bold" class="active">B</button>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="grp">
+    <button id="btn-delete" class="red">🗑 削除</button>
+    <button id="btn-undo">↩ 戻す</button>
+    <button id="btn-clear">全消去</button>
+    <button id="btn-lock">🔒 ロック</button>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="grp">
+    <button class="purple" id="btn-save">💾 PNG保存</button>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="grp">
+    <span class="lbl">トリミング</span>
+    <select id="crop-ratio">
+      <option value="free">自由</option>
+      <option value="4:3">4:3</option>
+      <option value="3:2">3:2</option>
+      <option value="16:9">16:9</option>
+    </select>
+    <button id="btn-crop-start" data-tool="crop">✂ 範囲選択</button>
+    <button id="btn-crop-exec" class="green" style="display:none">✔ 確定</button>
+    <button id="btn-crop-cancel" class="red" style="display:none">✕ キャンセル</button>
+  </div>
+
+</div>
+
+<div id="canvas-container">
+  <div id="canvas-wrap">
+    <canvas id="c"></canvas>
+    <div id="drop-zone">
+      <div id="drop-icon">🗂</div>
+      <div id="drop-text">「図面を開く」ボタンまたはここに画像をドロップ</div>
+    </div>
+  </div>
+</div>
+
+<div id="status-bar">
+  <span id="st-left">図面を読み込んでください</span>
+  <span id="st-right">オブジェクト: 0</span>
+</div>
+
+<script>
+const canvas = new fabric.Canvas('c', {
+  selection: true,
+  preserveObjectStacking: true
+});
+
+let currentTool = 'select';
+let currentColor = '#ff3b30';
+let lw = 2;
+let history = [];
+let isDrawing = false;
+let startX, startY, tempObj;
+
+// --- ツールボタン ---
+document.querySelectorAll('[data-tool]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTool = btn.dataset.tool;
+    canvas.isDrawingMode = false;
+    canvas.selection = currentTool === 'select';
+    canvas.forEachObject(o => o.selectable = currentTool === 'select');
+    updateStatus();
+  });
+});
+
+// --- 色 ---
+document.querySelectorAll('.swatch').forEach(sw => {
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    currentColor = sw.dataset.color;
+    // 選択中オブジェクトに適用
+    const obj = canvas.getActiveObject();
+    if (obj) {
+      obj.set('stroke', currentColor);
+      if (obj.type === 'i-text') obj.set('fill', currentColor);
+      canvas.renderAll();
+      saveHistory();
+    }
+  });
+});
+
+// --- 太さ ---
+const lwInput = document.getElementById('lw');
+const lwVal = document.getElementById('lw-val');
+lwInput.addEventListener('input', () => {
+  lw = parseInt(lwInput.value);
+  lwVal.textContent = lw;
+  const obj = canvas.getActiveObject();
+  if (obj && obj.type !== 'i-text') { obj.set('strokeWidth', lw); canvas.renderAll(); saveHistory(); }
+});
+
+// --- 塗りモード ---
+function getFill() {
+  const m = document.getElementById('fill-mode').value;
+  if (m === 'none') return 'transparent';
+  if (m === 'semi') return currentColor + '44';
+  return currentColor;
+}
+
+// --- 画像読み込み ---
+function loadImage(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    fabric.Image.fromURL(ev.target.result, img => {
+      const maxW = window.innerWidth - 40;
+      const maxH = window.innerHeight - 90;
+      let scale = Math.min(maxW / img.width, maxH / img.height, 1);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      canvas.setWidth(w);
+      canvas.setHeight(h);
+      img.scaleToWidth(w);
+      canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+      document.getElementById('drop-zone').classList.add('hidden');
+      history = [];
+      saveHistory();
+      setStatus('準備完了 — ツールを選んで描画してください');
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('btn-open').addEventListener('click', () => document.getElementById('file-input').click());
+document.getElementById('file-input').addEventListener('change', e => {
+  if (e.target.files[0]) loadImage(e.target.files[0]);
+  e.target.value = '';
+});
+
+const wrap = document.getElementById('canvas-wrap');
+wrap.addEventListener('dragover', e => e.preventDefault());
+wrap.addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadImage(f);
+});
+
+// --- 矢印ヘルパー ---
+function makeArrow(x1, y1, x2, y2) {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const headLen = Math.min(Math.max(14, lw * 3), 28);
+  const headWidth = headLen * 0.55;
+
+  // 三角形の3点
+  const tip  = { x: x2, y: y2 };
+  const bl = {
+    x: x2 - headLen * Math.cos(angle) + headWidth * Math.sin(angle),
+    y: y2 - headLen * Math.sin(angle) - headWidth * Math.cos(angle)
+  };
+  const br = {
+    x: x2 - headLen * Math.cos(angle) - headWidth * Math.sin(angle),
+    y: y2 - headLen * Math.sin(angle) + headWidth * Math.cos(angle)
+  };
+  // 線の終点は三角形底辺中央
+  const le = {
+    x: x2 - headLen * Math.cos(angle),
+    y: y2 - headLen * Math.sin(angle)
+  };
+
+  const pathData = [
+    `M ${x1} ${y1}`,
+    `L ${le.x} ${le.y}`,        // 線
+    `M ${tip.x} ${tip.y}`,      // 三角形
+    `L ${bl.x} ${bl.y}`,
+    `L ${br.x} ${br.y}`,
+    `Z`
+  ].join(' ');
+
+  const arrow = new fabric.Path(pathData, {
+    stroke: currentColor,
+    strokeWidth: lw,
+    fill: currentColor,
+    strokeLineCap: 'round',
+    strokeLineJoin: 'round',
+    selectable: true,
+    hasControls: true,
+    padding: 6
+  });
+  return arrow;
+}
+
+// --- Canvas マウスイベント ---
+canvas.on('mouse:down', opt => {
+  if (cropMode) return;
+  if (currentTool === 'select') return;
+  // テキスト入力欄にフォーカスが当たっている場合は無視
+  if (currentTool === 'text') {
+    const size = parseInt(document.getElementById('font-size').value);
+    const bold = document.getElementById('btn-bold').classList.contains('active');
+    const p = canvas.getPointer(opt.e);
+    const t = new fabric.IText('テキスト', {
+      left: p.x, top: p.y,
+      fill: currentColor,
+      fontSize: size,
+      fontWeight: bold ? 'bold' : 'normal',
+      fontFamily: 'Helvetica Neue, Hiragino Sans, sans-serif',
+      selectable: true
+    });
+    canvas.add(t);
+    canvas.setActiveObject(t);
+    t.enterEditing();
+    t.selectAll();
+    canvas.renderAll();
+    return;
+  }
+  isDrawing = true;
+  const p = canvas.getPointer(opt.e);
+  startX = p.x; startY = p.y;
+
+  if (currentTool === 'circle') {
+    tempObj = new fabric.Ellipse({
+      left: startX, top: startY,
+      rx: 0, ry: 0,
+      stroke: currentColor, strokeWidth: lw,
+      fill: getFill(),
+      selectable: false
+    });
+  } else if (currentTool === 'rect') {
+    tempObj = new fabric.Rect({
+      left: startX, top: startY,
+      width: 0, height: 0,
+      stroke: currentColor, strokeWidth: lw,
+      fill: getFill(),
+      selectable: false
+    });
+  } else if (currentTool === 'line') {
+    tempObj = new fabric.Line([startX, startY, startX, startY], {
+      stroke: currentColor, strokeWidth: lw,
+      strokeLineCap: 'round',
+      selectable: false,
+      padding: 8,
+      strokeUniform: true
+    });
+  } else if (currentTool === 'arrow') {
+    if (tempObj) { canvas.remove(tempObj); canvas.renderAll(); }
+    tempObj = null; // mousemoveで都度再生成
+  }
+  if (tempObj) canvas.add(tempObj);
+});
+
+function snapAngle(x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const angle = Math.atan2(dy, dx);
+  const snapped = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  return { x: x1 + dist * Math.cos(snapped), y: y1 + dist * Math.sin(snapped) };
+}
+
+canvas.on('mouse:move', opt => {
+  if (!isDrawing) return;
+  let p = canvas.getPointer(opt.e);
+  if (opt.e.shiftKey && (currentTool === 'line' || currentTool === 'arrow')) {
+    p = snapAngle(startX, startY, p.x, p.y);
+  }
+
+  if (currentTool === 'circle') {
+    const rx = Math.abs(p.x - startX) / 2;
+    const ry = Math.abs(p.y - startY) / 2;
+    tempObj.set({
+      left: Math.min(p.x, startX),
+      top: Math.min(p.y, startY),
+      rx, ry
+    });
+  } else if (currentTool === 'rect') {
+    tempObj.set({
+      left: Math.min(p.x, startX),
+      top: Math.min(p.y, startY),
+      width: Math.abs(p.x - startX),
+      height: Math.abs(p.y - startY)
+    });
+  } else if (currentTool === 'line') {
+    tempObj.set({ x2: p.x, y2: p.y });
+  } else if (currentTool === 'arrow') {
+    if (tempObj) { canvas.remove(tempObj); }
+    tempObj = makeArrow(startX, startY, p.x, p.y);
+    canvas.add(tempObj);
+  }
+  canvas.renderAll();
+});
+
+canvas.on('mouse:up', opt => {
+  if (!isDrawing) return;
+  isDrawing = false;
+  const p = canvas.getPointer(opt.e);
+  const dx = p.x - startX, dy = p.y - startY;
+  if (Math.sqrt(dx*dx + dy*dy) < 4) {
+    if (tempObj) canvas.remove(tempObj);
+    tempObj = null;
+    return;
+  }
+  if (tempObj) {
+    tempObj.set('selectable', currentTool === 'select' || true);
+    tempObj.selectable = true;
+    canvas.renderAll();
+    saveHistory();
+  }
+  tempObj = null;
+  updateObjCount();
+});
+
+// --- 削除 ---
+document.getElementById('btn-delete').addEventListener('click', () => {
+  const obj = canvas.getActiveObject();
+  if (!obj) return;
+  if (obj.type === 'activeSelection') {
+    obj.forEachObject(o => canvas.remove(o));
+    canvas.discardActiveObject();
+  } else {
+    canvas.remove(obj);
+  }
+  canvas.renderAll();
+  saveHistory();
+  updateObjCount();
+});
+
+// --- Undo ---
+function saveHistory() {
+  history.push(JSON.stringify(canvas.toJSON(['selectable'])));
+  if (history.length > 30) history.shift();
+  updateObjCount();
+}
+
+document.getElementById('btn-undo').addEventListener('click', () => {
+  if (history.length <= 1) return;
+  history.pop();
+  const prev = history[history.length - 1];
+  canvas.loadFromJSON(prev, () => {
+    canvas.renderAll();
+    updateObjCount();
+  });
+});
+
+// --- 全消去 ---
+document.getElementById('btn-clear').addEventListener('click', () => {
+  if (!confirm('描画を全て消去しますか？')) return;
+  canvas.getObjects().forEach(o => canvas.remove(o));
+  canvas.renderAll();
+  saveHistory();
+});
+
+// --- PNG保存 ---
+document.getElementById('btn-save').addEventListener('click', () => {
+  if (!canvas.backgroundImage) { alert('図面を読み込んでください'); return; }
+  const dataURL = canvas.toDataURL({ format: 'png', multiplier: 1 });
+  const a = document.createElement('a');
+  a.download = 'annotated-' + new Date().toISOString().slice(0,10) + '.png';
+  a.href = dataURL;
+  a.click();
+  setStatus('保存しました');
+});
+
+// --- キーボード ---
+document.addEventListener('keydown', e => {
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (document.activeElement.tagName === 'INPUT') return;
+    const obj = canvas.getActiveObject();
+    if (obj) {
+      if (obj.type === 'activeSelection') obj.forEachObject(o => canvas.remove(o));
+      else canvas.remove(obj);
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      saveHistory();
+      updateObjCount();
+    }
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+    document.getElementById('btn-undo').click();
+  }
+});
+
+// --- ボールドトグル ---
+document.getElementById('btn-bold').addEventListener('click', () => {
+  const btn = document.getElementById('btn-bold');
+  btn.classList.toggle('active');
+});
+
+// --- ロック ---
+document.getElementById('btn-lock').addEventListener('click', () => {
+  const obj = canvas.getActiveObject();
+  if (!obj) { setStatus('ロックするオブジェクトを選択してください'); return; }
+
+  const targets = obj.type === 'activeSelection'
+    ? obj.getObjects()
+    : [obj];
+
+  // 全部ロック済みならアンロック、そうでなければロック
+  const allLocked = targets.every(o => o.locked);
+  targets.forEach(o => {
+    o.locked = !allLocked;
+    o.set({
+      lockMovementX:  !allLocked,
+      lockMovementY:  !allLocked,
+      lockScalingX:   !allLocked,
+      lockScalingY:   !allLocked,
+      lockRotation:   !allLocked,
+      hasControls:    allLocked,
+      selectable:     true,
+      // ロック中は枠線を黄色の破線で表示
+      borderColor:    !allLocked ? '#ffcc00' : '#2196f3',
+      borderDashArray:!allLocked ? [4, 4] : null,
+    });
+  });
+
+  canvas.discardActiveObject();
+  canvas.renderAll();
+  saveHistory();
+  setStatus(allLocked ? 'アンロックしました' : 'ロックしました — 移動・変形が無効になりました');
+});
+
+function setStatus(msg) { document.getElementById('st-left').textContent = msg; }
+function updateObjCount() {
+  document.getElementById('st-right').textContent = 'オブジェクト: ' + canvas.getObjects().length;
+}
+function updateStatus() {
+  const labels = { select:'選択モード', arrow:'矢印を描画', line:'直線を描画', circle:'円を描画', rect:'四角を描画', text:'テキストを配置' };
+  setStatus(labels[currentTool] || '');
+}
+
+canvas.on('selection:created', () => setStatus('選択中 — 移動・削除できます'));
+canvas.on('selection:cleared', updateStatus);
+canvas.on('object:modified', saveHistory);
+canvas.on('text:editing:exited', saveHistory);
+
+
+// --- トリミング ---
+let cropRect = null;
+let cropMode = false;
+let cropStartX, cropStartY, cropDrawing = false;
+
+const btnCropStart  = document.getElementById('btn-crop-start');
+const btnCropExec   = document.getElementById('btn-crop-exec');
+const btnCropCancel = document.getElementById('btn-crop-cancel');
+const cropRatioSel  = document.getElementById('crop-ratio');
+
+function enterCropMode() {
+  if (!canvas.backgroundImage) { setStatus('図面を読み込んでください'); return; }
+  cropMode = true;
+  canvas.selection = false;
+  canvas.forEachObject(o => o.selectable = false);
+  canvas.defaultCursor = 'crosshair';
+  btnCropStart.style.display  = 'none';
+  btnCropExec.style.display   = '';
+  btnCropCancel.style.display = '';
+  if (cropRect) { canvas.remove(cropRect); cropRect = null; }
+  setStatus('トリミング範囲をドラッグで選択してください');
+}
+
+function exitCropMode(apply) {
+  cropMode = false;
+  canvas.selection = true;
+  canvas.forEachObject(o => {
+    o.selectable = true;
+    if (o.locked) {
+      o.set({ borderColor: '#ffcc00', borderDashArray: [4, 4] });
+    } else {
+      o.set({ borderColor: 'transparent', borderDashArray: null });
+    }
+  });
+  canvas.defaultCursor = 'default';
+  btnCropStart.style.display  = '';
+  btnCropExec.style.display   = 'none';
+  btnCropCancel.style.display = 'none';
+
+  if (apply && cropRect) {
+    const left   = cropRect.left;
+    const top    = cropRect.top;
+    const width  = cropRect.width  * (cropRect.scaleX || 1);
+    const height = cropRect.height * (cropRect.scaleY || 1);
+    // 先にcropRectを除去してから出力
+    canvas.remove(cropRect);
+    cropRect = null;
+    canvas.renderAll();
+    const dataFull = canvas.toDataURL({ format: 'png' });
+    const img = new Image();
+    img.onload = () => {
+      const tmp = document.createElement('canvas');
+      tmp.width  = canvas.width;
+      tmp.height = canvas.height;
+      tmp.getContext('2d').drawImage(img, 0, 0);
+      const cropped = document.createElement('canvas');
+      cropped.width  = Math.round(width);
+      cropped.height = Math.round(height);
+      cropped.getContext('2d').drawImage(tmp, Math.round(left), Math.round(top), Math.round(width), Math.round(height), 0, 0, Math.round(width), Math.round(height));
+      const a = document.createElement('a');
+      a.download = 'cropped-' + new Date().toISOString().slice(0,10) + '.png';
+      a.href = cropped.toDataURL('image/png');
+      a.click();
+      setStatus('トリミング済み画像を保存しました');
+    };
+    img.src = dataFull;
+  }
+  if (cropRect) { canvas.remove(cropRect); cropRect = null; }
+  canvas.renderAll();
+  if (!apply) setStatus('トリミングをキャンセルしました');
+}
+
+btnCropStart.addEventListener('click',  enterCropMode);
+btnCropExec.addEventListener('click',   () => exitCropMode(true));
+btnCropCancel.addEventListener('click', () => exitCropMode(false));
+
+canvas.on('mouse:down', opt => {
+  if (!cropMode) return;
+  if (document.activeElement === document.getElementById('text-input')) return;
+  cropDrawing = true;
+  const p = canvas.getPointer(opt.e);
+  cropStartX = p.x; cropStartY = p.y;
+  if (cropRect) canvas.remove(cropRect);
+  cropRect = new fabric.Rect({
+    left: cropStartX, top: cropStartY,
+    width: 0, height: 0,
+    stroke: '#00cfff', strokeWidth: 2,
+    strokeDashArray: [6, 4],
+    fill: 'rgba(0,180,255,0.08)',
+    selectable: false, evented: false
+  });
+  canvas.add(cropRect);
+});
+
+canvas.on('mouse:move', opt => {
+  if (!cropMode || !cropDrawing) return;
+  const p = canvas.getPointer(opt.e);
+  let w = p.x - cropStartX;
+  let h = p.y - cropStartY;
+  const ratio = cropRatioSel.value;
+  if (ratio !== 'free') {
+    const [rw, rh] = ratio.split(':').map(Number);
+    if (Math.abs(w) / Math.abs(h) > rw / rh) {
+      h = (Math.abs(w) / rw * rh) * Math.sign(h || 1);
+    } else {
+      w = (Math.abs(h) / rh * rw) * Math.sign(w || 1);
+    }
+  }
+  cropRect.set({
+    left:   w >= 0 ? cropStartX : cropStartX + w,
+    top:    h >= 0 ? cropStartY : cropStartY + h,
+    width:  Math.abs(w),
+    height: Math.abs(h)
+  });
+  canvas.renderAll();
+});
+
+canvas.on('mouse:up', () => { if (cropMode) cropDrawing = false; });
+
+
+// ページ全体のドロップを横取り
+document.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadImage(f);
+});
+
+// 初期サイズ
+canvas.setWidth(600);
+canvas.setHeight(400);
+saveHistory();
+</script>
+</body>
+</html>
