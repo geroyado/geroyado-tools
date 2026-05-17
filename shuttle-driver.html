@@ -135,7 +135,13 @@ import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/fireb
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
-  databaseURL: 'https://gero-room-status-default-rtdb.asia-southeast1.firebasedatabase.app'
+  apiKey: "AIzaSyBHGHSqKn_enfNstKvlm3tMnanlCrMQJmk",
+  authDomain: "gero-room-status.firebaseapp.com",
+  databaseURL: "https://gero-room-status-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "gero-room-status",
+  storageBucket: "gero-room-status.firebasestorage.app",
+  messagingSenderId: "404284538951",
+  appId: "1:404284538951:web:2f56016b2837c21b373162"
 };
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
