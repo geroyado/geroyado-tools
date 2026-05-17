@@ -132,12 +132,15 @@ html, body {
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
   databaseURL: 'https://gero-room-status-default-rtdb.asia-southeast1.firebasedatabase.app'
 };
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
+const auth = getAuth(app);
+signInAnonymously(auth);
 
 const syncEl = document.getElementById('syncStatus');
 

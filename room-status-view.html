@@ -107,12 +107,15 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
   databaseURL: 'https://gero-room-status-default-rtdb.asia-southeast1.firebasedatabase.app'
 };
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
+const auth = getAuth(app);
+signInAnonymously(auth);
 
 const FLOORS = [
   { label: '4階', rooms: [401,402,403,405,406,407,408,410,411,412] },
