@@ -365,32 +365,27 @@
 
   window.addEventListener('load', fetchEvents);
 
-  // 稼働率キャプション & アップロードカード（3秒以内に3回タップで管理者モード解放）
+  // 稼働率キャプション：GitHubのJSONから取得
   (async function() {
     const cap = document.getElementById('occ-caption');
     try {
-      const r = await window.storage.get('occ_data_v1', true);
-      if (r) {
-        const { data, parsedAt } = JSON.parse(r.value);
-        if (data && data.length > 0) {
-          const d0 = new Date(data[0].date);
-          const d1 = new Date(data[data.length - 1].date);
-          const saved = new Date(parsedAt);
-          const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
-          const fmtSaved = d =>
-            `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}更新`;
-          cap.textContent = `${fmt(d0)}〜${fmt(d1)}（${data.length}日分）· ${fmtSaved(saved)}`;
-        } else {
-          cap.textContent = 'データなし — 管理者がアップロードすると表示されます';
-        }
+      const res = await fetch('https://raw.githubusercontent.com/geroyado/geroyado-tools/main/data/occ_data.json?t=' + Date.now());
+      if (!res.ok) throw new Error();
+      const { data, parsedAt } = await res.json();
+      if (data && data.length > 0) {
+        const d0 = new Date(data[0].date);
+        const d1 = new Date(data[data.length - 1].date);
+        const saved = new Date(parsedAt);
+        const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+        const fmtSaved = d =>
+          `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}更新`;
+        cap.textContent = `${fmt(d0)}〜${fmt(d1)}（${data.length}日分）· ${fmtSaved(saved)}`;
       } else {
-        cap.textContent = 'データなし — 管理者がアップロードすると表示されます';
+        cap.textContent = 'データなし';
       }
     } catch(e) {
-      cap.textContent = '取得できませんでした';
+      cap.textContent = 'データなし';
     }
-
-
   })();
 
   // 月次概況キャプション：ファイル名から作成年月を生成
