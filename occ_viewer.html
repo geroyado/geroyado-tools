@@ -8,20 +8,21 @@
 :root {
   --bg: #0d0f14; --surface: #161920; --surface2: #1e2230;
   --border: #272c3f; --text: #dde1ed; --dim: #6b7494;
-  --c-danger: #3d0e0e; --c-warn: #332200; --c-good: #0d2240; --c-full: #1a2e1a;
-  --t-danger: #f87171; --t-warn: #fbbf24; --t-good: #60a5fa; --t-full: #d1fae5;
+  /* 稼働率色：背景を明るく、文字を濃く */
+  --c-danger: #1c1c1c; --c-warn: #3d3d3d; --c-good: #6b6b6b; --c-full: #e8e8e8;
+  --t-danger: #888888; --t-warn: #cccccc; --t-good: #f0f0f0; --t-full: #111111;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Hiragino Sans','Yu Gothic UI',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 32px 16px 80px; }
 
-header { display: flex; align-items: center; gap: 12px; max-width: 900px; margin: 0 auto 32px; }
+header { display: flex; align-items: center; gap: 12px; max-width: 960px; margin: 0 auto 32px; }
 .logo { width: 38px; height: 38px; border-radius: 9px; background: linear-gradient(135deg,#f87171,#fbbf24); display: flex; align-items: center; justify-content: center; font-size: 18px; }
 header h1 { font-size: 17px; font-weight: 700; }
 header .sub { font-size: 11px; color: var(--dim); margin-top: 2px; }
-.back { margin-left: auto; font-size: 12px; color: var(--dim); text-decoration: none; padding: 5px 12px; border: 1px solid var(--border); border-radius: 6px; transition: .2s; }
+.back { margin-left: auto; font-size: 12px; color: var(--dim); text-decoration: none; padding: 5px 12px; border: 1px solid var(--border); border-radius: 6px; transition: .2s; white-space: nowrap; }
 .back:hover { color: var(--text); border-color: #f87171; }
 
-#meta-bar { display: none; max-width: 900px; margin: 0 auto 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; font-size: 12px; align-items: center; gap: 16px; }
+#meta-bar { display: none; max-width: 960px; margin: 0 auto 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; font-size: 12px; align-items: center; gap: 16px; }
 #meta-bar .mb-file { font-weight: 600; }
 #meta-bar .mb-saved { color: var(--dim); }
 #meta-bar .mb-badge { margin-left: auto; background: #0f2e1a; border: 1px solid #166534; color: #4ade80; font-size: 10px; font-weight: 700; padding: 2px 10px; border-radius: 20px; }
@@ -31,37 +32,47 @@ header .sub { font-size: 11px; color: var(--dim); margin-top: 2px; }
 #empty h2 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
 #empty p { font-size: 13px; color: var(--dim); }
 
-.legend { display: flex; gap: 16px; flex-wrap: wrap; max-width: 900px; margin: 0 auto 20px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; max-width: 960px; margin: 0 auto 16px; }
 .leg { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--dim); }
 .leg-sw { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; }
 
-.summary { display: grid; grid-template-columns: repeat(auto-fill,minmax(110px,1fr)); gap: 10px; max-width: 900px; margin: 0 auto 28px; }
+/* サマリー：1行・均等幅 */
+.summary-wrap { max-width: 960px; margin: 0 auto 24px; }
+.summary { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; }
 .sc { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
-.sc-label { font-size: 10px; color: var(--dim); margin-bottom: 5px; font-weight: 600; }
-.sc-val { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.sc-sub { font-size: 10px; color: var(--dim); margin-top: 2px; }
+.sc-label { font-size: 12px; color: var(--dim); margin-bottom: 6px; font-weight: 700; white-space: nowrap; }
+.sc-val { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.sc-sub { font-size: 11px; color: var(--dim); margin-top: 2px; }
 
-.tbl-wrap { max-width: 900px; margin: 0 auto; overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
-table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 12px; }
-thead th { background: var(--surface2); padding: 9px 12px; text-align: center; font-weight: 700; color: var(--dim); font-size: 11px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+/* テーブル */
+.tbl-wrap { max-width: 960px; margin: 0 auto; overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+thead th { background: var(--surface2); padding: 10px 14px; text-align: center; font-weight: 700; color: var(--dim); font-size: 11px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 thead th:first-child, thead th:nth-child(2) { text-align: left; }
 tbody tr { border-bottom: 1px solid #191d2b; }
 tbody tr:last-child { border-bottom: none; }
-td { padding: 6px 12px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
-td:first-child { text-align: left; font-weight: 600; font-size: 11px; }
-td:nth-child(2) { color: var(--dim); font-size: 11px; text-align: left; }
+td { padding: 7px 14px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
+td:first-child { text-align: left; font-weight: 700; font-size: 14px; }
+td:nth-child(2) { color: var(--dim); font-size: 14px; text-align: left; font-weight: 600; }
 
 .c-danger{background:var(--c-danger);color:var(--t-danger);}
 .c-warn{background:var(--c-warn);color:var(--t-warn);}
 .c-good{background:var(--c-good);color:var(--t-good);}
-.c-full{background:var(--c-full);color:var(--t-full);font-weight:700;}
-.c-na{color:var(--dim);}
+.c-full{background:var(--c-full);color:var(--t-full);font-weight:800;}
+.c-na{color:var(--dim);font-weight:400;}
 
-.avg-row td { background: var(--surface2)!important; color: var(--text)!important; font-weight: 800; font-size: 11px; border-top: 2px solid var(--border); }
-.avg-val { color: #f87171!important; }
+.avg-row td { background: #111827!important; color: var(--text)!important; font-weight: 800; font-size: 12px; border-top: 2px solid var(--border); }
+.avg-val { color: #fbbf24!important; font-size: 13px; }
 .m-sep td { border-top: 2px solid var(--border); }
 .r-sat td:first-child { color: #60a5fa; }
+.r-sat td:nth-child(2) { color: #60a5fa; }
+.r-sat { background: rgba(96,165,250,0.06); }
 .r-sun td:first-child { color: #f87171; }
+.r-sun td:nth-child(2) { color: #f87171; }
+.r-sun { background: rgba(248,113,113,0.06); }
+.r-hol td:first-child { color: #fb923c; }
+.r-hol td:nth-child(2) { color: #fb923c; }
+.r-hol { background: rgba(251,146,60,0.08); }
 
 #loading { display: none; text-align: center; padding: 60px; color: var(--dim); font-size: 14px; }
 .spin { width: 28px; height: 28px; margin: 0 auto 14px; border: 2px solid var(--border); border-top-color: #f87171; border-radius: 50%; animation: sp .7s linear infinite; }
@@ -91,12 +102,15 @@ td:nth-child(2) { color: var(--dim); font-size: 11px; text-align: left; }
 
 <div id="main" style="display:none">
   <div class="legend">
-    <div class="leg"><div class="leg-sw" style="background:var(--c-full)"></div>80%以上</div>
-    <div class="leg"><div class="leg-sw" style="background:var(--c-good)"></div>50〜79%</div>
-    <div class="leg"><div class="leg-sw" style="background:var(--c-warn)"></div>30〜49%</div>
-    <div class="leg"><div class="leg-sw" style="background:var(--c-danger)"></div>30%未満</div>
+    <div class="leg"><div class="leg-sw" style="background:#e8e8e8;border:1px solid #555"></div>80%以上</div>
+    <div class="leg"><div class="leg-sw" style="background:#6b6b6b"></div>50〜79%</div>
+    <div class="leg"><div class="leg-sw" style="background:#3d3d3d"></div>30〜49%</div>
+    <div class="leg"><div class="leg-sw" style="background:#1c1c1c;border:1px solid #444"></div>30%未満</div>
+    <div class="leg"><div class="leg-sw" style="background:rgba(96,165,250,0.2);border:1px solid #60a5fa"></div>土曜</div>
+    <div class="leg"><div class="leg-sw" style="background:rgba(248,113,113,0.2);border:1px solid #f87171"></div>日曜</div>
+    <div class="leg"><div class="leg-sw" style="background:rgba(251,146,60,0.2);border:1px solid #fb923c"></div>祝日</div>
   </div>
-  <div class="summary" id="summary"></div>
+  <div class="summary-wrap"><div class="summary" id="summary"></div></div>
   <div class="tbl-wrap">
     <table>
       <thead><tr>
@@ -114,6 +128,10 @@ const DATA_URL = 'https://raw.githubusercontent.com/geroyado/geroyado-tools/main
 const ROOM_TYPES = ['和室','2Fツイン','3Fツイン','4Fツイン','3階露天付','4階露天付','特別室'];
 const DOW = ['日','月','火','水','木','金','土'];
 
+// Google Calendar API（ポータルと同じキー）
+const GC_KEY = 'AIzaSyAnDi54uk6JE4p3wIaIO9Y44b59hp1lEqM';
+const HOLIDAY_CAL = 'ja.japanese#holiday@group.v.calendar.google.com';
+
 function cls(v) {
   if (v===null) return 'c-na';
   if (v>=.80) return 'c-full'; if (v>=.50) return 'c-good';
@@ -130,23 +148,46 @@ function fmtSaved(iso) {
   const d=new Date(iso);
   return `更新: ${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
+function dateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// 祝日取得
+async function fetchHolidays(dateFrom, dateTo) {
+  try {
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(HOLIDAY_CAL)}/events?key=${GC_KEY}&timeMin=${dateFrom}&timeMax=${dateTo}&singleEvents=true&orderBy=startTime&maxResults=50`;
+    const res = await fetch(url);
+    if (!res.ok) return {};
+    const json = await res.json();
+    const map = {};
+    (json.items || []).forEach(ev => {
+      if (ev.start && ev.start.date) map[ev.start.date] = ev.summary;
+    });
+    return map;
+  } catch { return {}; }
+}
 
 async function load() {
   document.getElementById('loading').style.display = 'block';
   try {
-    // キャッシュバスター付きで取得
     const res = await fetch(DATA_URL + '?t=' + Date.now());
     if (!res.ok) { showEmpty(); return; }
     const { data, filename, parsedAt } = await res.json();
     document.getElementById('loading').style.display = 'none';
     if (!data || !data.length) { showEmpty(); return; }
 
+    // 祝日を並行取得
+    const d0 = new Date(data[0].date);
+    const d1 = new Date(data[data.length-1].date);
+    d1.setDate(d1.getDate()+1);
+    const holidays = await fetchHolidays(d0.toISOString(), d1.toISOString());
+
     document.getElementById('mb-file').textContent = filename;
     document.getElementById('mb-saved').textContent = fmtSaved(parsedAt);
     document.getElementById('meta-bar').style.display = 'flex';
     document.getElementById('header-sub').textContent =
       `${new Date(data[0].date).getMonth()+1}月〜 ${data.length}日分`;
-    render(data);
+    render(data, holidays);
   } catch {
     document.getElementById('loading').style.display = 'none';
     showEmpty();
@@ -158,7 +199,7 @@ function showEmpty() {
   document.getElementById('header-sub').textContent = 'データなし';
 }
 
-function render(data) {
+function render(data, holidays={}) {
   document.getElementById('main').style.display = 'block';
   const allOvr = data.map(d=>d.overall).filter(v=>v!==null);
   const avgAll = allOvr.reduce((s,v)=>s+v,0)/allOvr.length;
@@ -186,11 +227,16 @@ function render(data) {
   Object.values(months).forEach(mRows=>{
     mRows.forEach((row,ri)=>{
       const d=new Date(row.date), dow=d.getDay();
+      const key=dateKey(d);
+      const holName=holidays[key]||null;
       const tr=document.createElement('tr');
       if(!first&&ri===0) tr.className='m-sep';
-      if(dow===6) tr.classList.add('r-sat');
-      if(dow===0) tr.classList.add('r-sun');
-      tr.innerHTML=`<td>${fmtDate(row.date)}</td><td>${DOW[dow]}</td>${row.occs.map(v=>`<td class="${cls(v)}">${pct(v)}</td>`).join('')}<td class="${cls(row.overall)}">${pct(row.overall)}</td>`;
+      // 祝日優先、次に土日
+      if(holName) tr.classList.add('r-hol');
+      else if(dow===6) tr.classList.add('r-sat');
+      else if(dow===0) tr.classList.add('r-sun');
+      const dowLabel = DOW[dow];
+      tr.innerHTML=`<td>${fmtDate(row.date)}</td><td>${dowLabel}</td>${row.occs.map(v=>`<td class="${cls(v)}">${pct(v)}</td>`).join('')}<td class="${cls(row.overall)}">${pct(row.overall)}</td>`;
       tbody.appendChild(tr);
     });
     const label=`${new Date(mRows[0].date).getMonth()+1}月平均`;
