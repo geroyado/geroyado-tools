@@ -7,16 +7,14 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'Hiragino Kaku Gothic Pro', Meiryo, sans-serif; }
-
 .app { width: 100%; padding: 10px 12px 40px; max-width: 900px; margin: 0 auto; }
 
-/* ヘッダー */
 .header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .title { font-size: 18px; font-weight: 700; color: #222; }
 .sync-status { font-size: 11px; color: #999; }
 .sync-status.ok  { color: #00A040; }
 .sync-status.err { color: #CC3300; }
-.header-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.header-right { margin-left: auto; }
 .btn-qr {
   padding: 8px 14px; font-size: 13px; font-weight: 600;
   border-radius: 8px; cursor: pointer;
@@ -25,12 +23,10 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
 }
 .btn-qr:active { background: #FFE0B2; }
 
-/* カウンター */
 .counter-bar { display: flex; gap: 8px; margin-bottom: 12px; }
 .counter-item {
   flex: 1; text-align: center; background: #fff;
-  border-radius: 8px; padding: 8px 4px;
-  border: 1px solid #E0E0E0;
+  border-radius: 8px; padding: 8px 4px; border: 1px solid #E0E0E0;
 }
 .counter-num   { font-size: 24px; font-weight: 700; }
 .counter-label { font-size: 10px; color: #888; margin-top: 1px; }
@@ -38,71 +34,50 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
 .c-num-done    { color: #2E7D32; }
 .c-num-other   { color: #999; }
 
-/* 凡例 */
 .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
 .legend-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #555; }
 .legend-dot { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; }
 
-/* フロア */
 .floor { margin-bottom: 14px; }
 .floor-label { font-size: 12px; font-weight: 600; color: #888; margin-bottom: 6px; letter-spacing: 0.05em; }
 
-/* 部屋行：フレックスで横並び、区切りを挟む */
-.rooms {
-  display: flex; gap: 6px; align-items: stretch; width: 100%;
-}
-.room-sep {
-  width: 10px; flex-shrink: 0;
-}
+.rooms { display: flex; gap: 6px; align-items: stretch; width: 100%; }
+.room-sep   { width: 10px; flex-shrink: 0; }
+.room-blank { flex: 1; min-width: 0; } /* 202・211など存在しない部屋のスペース確保 */
 
 /* 部屋カード */
 .room-card {
   flex: 1; min-width: 0;
-  border-radius: 8px;
-  border: 2px solid transparent;
+  border-radius: 8px; border: 2px solid #CCC;
+  background: #E8E8E8;
   padding: 12px 4px 8px;
   display: flex; flex-direction: column;
   align-items: center; gap: 5px;
   position: relative; user-select: none;
   min-height: 76px; justify-content: center;
 }
-.room-card.clickable { cursor: pointer; }
+.room-card.clickable { cursor: pointer; border-color: #FF9800; background: #FFF3E0; }
 .room-card.clickable:active { filter: brightness(0.93); transform: scale(0.96); }
+.room-card.s-waiting { border-color: #FF9800; background: #FFF3E0; cursor: pointer; }
+.room-card.s-done    { border-color: #66BB6A; background: #E8F5E9; }
 
-.room-num {
-  font-size: clamp(13px, 2vw, 18px); font-weight: 700; line-height: 1;
-}
+.room-num { font-size: clamp(13px, 2vw, 18px); font-weight: 700; line-height: 1; color: #BBB; }
+.room-card.clickable .room-num { color: #E65100; }
+.room-card.s-waiting .room-num { color: #E65100; }
+.room-card.s-done    .room-num { color: #2E7D32; }
 .room-num.small { font-size: clamp(11px, 1.5vw, 14px); }
+
 .room-badge {
   font-size: 9px; font-weight: 600;
   padding: 2px 5px; border-radius: 6px; white-space: nowrap;
 }
-
-/* 状態カラー */
-.s-unused   { background: #E8E8E8; border-color: #CCC; }
-.s-unused   .room-num   { color: #BBB; }
-.s-unused   .room-badge { background: #DDD; color: #AAA; }
-
-.s-inuse    { background: #EEF4FF; border-color: #99BBEE; }
-.s-inuse    .room-num   { color: #2255AA; }
-.s-inuse    .room-badge { background: #C8D8F8; color: #1A3A88; }
-
-.s-out      { background: #FFF8E1; border-color: #FFCC80; }
-.s-out      .room-num   { color: #8D5700; }
-.s-out      .room-badge { background: #FFE082; color: #7A4500; }
-
-.s-waiting  { background: #FFF3E0; border-color: #FF9800; }
-.s-waiting  .room-num   { color: #E65100; }
-.s-waiting  .room-badge { background: #FFE0B2; color: #BF360C; }
-
-.s-done     { background: #E8F5E9; border-color: #66BB6A; }
-.s-done     .room-num   { color: #2E7D32; }
-.s-done     .room-badge { background: #C8E6C9; color: #1B5E20; }
+.room-card.s-waiting .room-badge { background: #FFE0B2; color: #BF360C; }
+.room-card.s-done    .room-badge { background: #C8E6C9; color: #1B5E20; }
 
 .wait-mark { position: absolute; top: 4px; right: 5px; font-size: 10px; }
 .done-mark { position: absolute; top: 4px; right: 5px; font-size: 11px; color: #2E7D32; font-weight: 700; }
 
-/* 確認ダイアログ */
+/* ダイアログ */
 .overlay {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.4); z-index: 300;
@@ -124,7 +99,7 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
 }
 .btn-confirm-ok:active { background: #E65100; }
 .btn-confirm-cancel {
-  padding: 10px; font-size: 13px; font-weight: 500;
+  padding: 10px; font-size: 13px;
   border-radius: 10px; cursor: pointer; border: none;
   background: #F0F0F0; color: #666;
 }
@@ -145,7 +120,7 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
 .qr-sub   { font-size: 11px; color: #888; line-height: 1.6; margin-bottom: 16px; }
 #qr-canvas { margin: 0 auto 16px; display: block; }
 .qr-close {
-  padding: 8px 24px; font-size: 13px; font-weight: 500;
+  padding: 8px 24px; font-size: 13px;
   border-radius: 8px; cursor: pointer;
   border: 1.5px solid #CCC; background: #F5F5F5; color: #666;
 }
@@ -153,7 +128,6 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
 </head>
 <body>
 <div class="app">
-
   <div class="header">
     <span class="title">清掃確認ボード</span>
     <span class="sync-status" id="syncStatus">接続中…</span>
@@ -178,18 +152,14 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
   </div>
 
   <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#FF9800;border:2px solid #FF9800"></div>確認依頼中</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#66BB6A;border:2px solid #66BB6A"></div>確認済み</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#FFF8E1;border:2px solid #FFCC80"></div>CO済（未依頼）</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#EEF4FF;border:2px solid #99BBEE"></div>使用中</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#E8E8E8;border:2px solid #CCC"></div>未使用</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#FF9800"></div>確認依頼中</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#66BB6A"></div>確認済み</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E8E8E8;border:1px solid #CCC"></div>その他</div>
   </div>
 
   <div id="floors"></div>
-
 </div>
 
-<!-- 確認依頼ダイアログ -->
 <div class="overlay" id="confirmOverlay">
   <div class="dialog-box">
     <div class="dialog-room" id="dialogRoom"></div>
@@ -201,7 +171,6 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
   </div>
 </div>
 
-<!-- QRモーダル -->
 <div class="qr-overlay" id="qrOverlay">
   <div class="qr-box">
     <div class="qr-title">スマホ用 確認画面</div>
@@ -231,14 +200,16 @@ const db   = getDatabase(app);
 const auth = getAuth(app);
 signInAnonymously(auth);
 
-// 'sep'で区切りを表現
+// 'sep'=区切り, 'blank'=存在しない部屋のスペース
 const FLOORS = [
   { label: '4階', rooms: ['401','402','403','405','sep','406','407','408','410','411','412'] },
-  { label: '3階', rooms: ['301','302','303','305','sep','306','307','308','310','311','312'] },
-  { label: '2階', rooms: ['201','203','205','sep','206','207','208','210','cabin'] }
+  { label: '3階', rooms: ['301','302','303','305','sep','306','307','308','310','311','blank','312'] },
+  { label: '2階', rooms: ['201','blank','203','205','sep','206','207','208','210','cabin'] }
 ];
 const allRooms = [];
-FLOORS.forEach(f => f.rooms.forEach(r => { if(r !== 'sep') allRooms.push(r); }));
+FLOORS.forEach(f => f.rooms.forEach(r => {
+  if (r !== 'sep' && r !== 'blank') allRooms.push(r);
+}));
 
 const state = {};
 allRooms.forEach(r => { state[r] = { status: 'unused', clean_status: '' }; });
@@ -251,8 +222,8 @@ onValue(ref(db, 'rooms'), snap => {
   allRooms.forEach(r => {
     state[r].status       = data[r]?.status       || 'unused';
     state[r].clean_status = data[r]?.clean_status || '';
-    renderCard(r);
   });
+  renderAll();   // データ受信後に全体再描画（クリックイベントも最新状態で再設定）
   updateCounters();
   syncEl.textContent = '● 同期中';
   syncEl.className = 'sync-status ok';
@@ -266,30 +237,7 @@ function getCardState(r) {
   if (s.clean_status === 'done')    return 'done';
   if (s.clean_status === 'waiting') return 'waiting';
   if (s.status === 'out')           return 'out';
-  if (['staying','inroom','h8','h9','unoccupied'].includes(s.status)) return 'inuse';
-  return 'unused';
-}
-
-function getBadgeText(r) {
-  const cs = state[r].clean_status;
-  if (cs === 'done')    return '確認済み';
-  if (cs === 'waiting') return '依頼中';
-  return '';
-}
-
-function renderCard(r) {
-  const card = document.getElementById('card-' + r);
-  if (!card) return;
-  const cs = getCardState(r);
-  card.className = 'room-card s-' + cs + (cs === 'out' ? ' clickable' : '');
-  const badge    = card.querySelector('.room-badge');
-  const waitMark = card.querySelector('.wait-mark');
-  const doneMark = card.querySelector('.done-mark');
-  const txt = getBadgeText(r);
-  badge.textContent   = txt;
-  badge.style.display = txt ? '' : 'none';
-  waitMark.textContent = cs === 'waiting' ? '🔔' : '';
-  doneMark.style.display = cs === 'done' ? '' : 'none';
+  return 'other';
 }
 
 function updateCounters() {
@@ -306,10 +254,12 @@ function updateCounters() {
 }
 
 function makeCard(r) {
-  const card = document.createElement('div');
   const cs = getCardState(r);
-  card.className = 'room-card s-' + cs + (cs === 'out' ? ' clickable' : '');
-  card.id = 'card-' + r;
+  const card = document.createElement('div');
+  card.className = 'room-card'
+    + (cs === 'waiting' ? ' s-waiting' : '')
+    + (cs === 'done'    ? ' s-done'    : '')
+    + (cs === 'out'     ? ' clickable' : '');
 
   const waitMark = document.createElement('span');
   waitMark.className = 'wait-mark';
@@ -317,8 +267,7 @@ function makeCard(r) {
 
   const doneMark = document.createElement('span');
   doneMark.className = 'done-mark';
-  doneMark.textContent = '✓';
-  doneMark.style.display = cs === 'done' ? '' : 'none';
+  doneMark.textContent = cs === 'done' ? '✓' : '';
 
   const numEl = document.createElement('div');
   numEl.className = 'room-num' + (r === 'cabin' ? ' small' : '');
@@ -326,23 +275,25 @@ function makeCard(r) {
 
   const badge = document.createElement('div');
   badge.className = 'room-badge';
-  const txt = getBadgeText(r);
-  badge.textContent   = txt;
-  badge.style.display = txt ? '' : 'none';
+  if (cs === 'waiting') { badge.textContent = '依頼中'; badge.style.display = ''; }
+  else if (cs === 'done') { badge.textContent = '確認済み'; badge.style.display = ''; }
+  else { badge.textContent = ''; badge.style.display = 'none'; }
 
   card.appendChild(waitMark);
   card.appendChild(doneMark);
   card.appendChild(numEl);
   card.appendChild(badge);
 
-  card.addEventListener('click', () => {
-    if (getCardState(r) !== 'out') return;
-    pendingRoom = r;
-    const label = r === 'cabin' ? 'キャビン' : r + '号室';
-    document.getElementById('dialogRoom').textContent = label;
-    document.getElementById('dialogMsg').textContent  = 'に確認依頼を出してよろしいですか？';
-    document.getElementById('confirmOverlay').classList.add('open');
-  });
+  // CO済の部屋のみクリックで確認依頼
+  if (cs === 'out') {
+    card.addEventListener('click', () => {
+      pendingRoom = r;
+      const label = r === 'cabin' ? 'キャビン' : r + '号室';
+      document.getElementById('dialogRoom').textContent = label;
+      document.getElementById('dialogMsg').textContent  = 'に確認依頼を出してよろしいですか？';
+      document.getElementById('confirmOverlay').classList.add('open');
+    });
+  }
 
   return card;
 }
@@ -361,6 +312,10 @@ function renderAll() {
         const sep = document.createElement('div');
         sep.className = 'room-sep';
         rowEl.appendChild(sep);
+      } else if (r === 'blank') {
+        const blank = document.createElement('div');
+        blank.className = 'room-blank';
+        rowEl.appendChild(blank);
       } else {
         rowEl.appendChild(makeCard(r));
       }
@@ -369,7 +324,6 @@ function renderAll() {
     container.appendChild(floorDiv);
   });
 }
-renderAll();
 
 document.getElementById('dialogOk').addEventListener('click', () => {
   if (!pendingRoom) return;
