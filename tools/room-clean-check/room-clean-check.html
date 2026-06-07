@@ -23,9 +23,10 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
 }
 .btn-qr:active { background: #FFE0B2; }
 
-.counter-bar { display: flex; gap: 6px; margin-bottom: 12px; width: var(--row-w, auto); }
+.counter-bar { display: flex; gap: 6px; margin-bottom: 12px; }
 .counter-item {
-  flex: 1; text-align: center; background: #fff;
+  width: var(--counter-w, auto); flex-shrink: 0;
+  text-align: center; background: #fff;
   border-radius: 8px; padding: 8px 4px; border: 1px solid #E0E0E0;
 }
 .counter-num   { font-size: 24px; font-weight: 700; }
@@ -329,8 +330,10 @@ function calcCardWidth() {
   const gapCount  = cardCount + sepCount - 1;
   const w = Math.floor((appW - sepCount * 10 - gapCount * 6) / cardCount);
   const rowW = cardCount * w + sepCount * 10 + gapCount * 6;
+  // カウンター3枚でrow幅を均等に割る（gap 6px×2を引く）
+  const counterW = Math.floor((rowW - 6 * 2) / 3);
   document.documentElement.style.setProperty('--card-w', w + 'px');
-  document.documentElement.style.setProperty('--row-w', rowW + 'px');
+  document.documentElement.style.setProperty('--counter-w', counterW + 'px');
 }
 
 // 初期描画（幅計算→描画の順を保証）
