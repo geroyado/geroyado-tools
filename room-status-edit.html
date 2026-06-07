@@ -555,6 +555,28 @@ function checkShuttleAutoReset(){
 }
 checkShuttleAutoReset();
 setInterval(checkShuttleAutoReset, 60000); // 1分ごとにチェック
+
+// 15:00になったら清掃確認ステータスを自動リセット
+function checkCleanStatusAutoReset(){
+  const now = new Date();
+  const hh = now.getHours();
+  const mm = now.getMinutes();
+  const todayKey = now.toDateString();
+  if(hh > 15 || (hh === 15 && mm >= 0)){
+    const lastReset = localStorage.getItem('cleanStatusAutoResetDate');
+    if(lastReset !== todayKey){
+      const updates = {};
+      allRooms.forEach(r => { updates['rooms/' + r + '/clean_status'] = ''; });
+      update(ref(db), updates);
+      localStorage.setItem('cleanStatusAutoResetDate', todayKey);
+    }
+  } else {
+    // 15:00前はフラグをリセット（翌日対応）
+    localStorage.removeItem('cleanStatusAutoResetDate');
+  }
+}
+checkCleanStatusAutoReset();
+setInterval(checkCleanStatusAutoReset, 60000); // 1分ごとにチェック
 </script>
 </body>
 </html>
