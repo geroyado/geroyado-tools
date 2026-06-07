@@ -23,10 +23,12 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
 }
 .btn-qr:active { background: #FFE0B2; }
 
-.counter-bar { display: flex; gap: 6px; margin-bottom: 12px; }
+/* カウンターバー・部屋行・凡例を同じwrapperで幅を統一 */
+.content-wrap { width: 100%; }
+
+.counter-bar { display: flex; gap: 6px; margin-bottom: 12px; width: 100%; }
 .counter-item {
-  width: var(--counter-w, auto); flex-shrink: 0;
-  text-align: center; background: #fff;
+  flex: 1; text-align: center; background: #fff;
   border-radius: 8px; padding: 8px 4px; border: 1px solid #E0E0E0;
 }
 .counter-num   { font-size: 24px; font-weight: 700; }
@@ -42,68 +44,44 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
 .floor { margin-bottom: 14px; }
 .floor-label { font-size: 12px; font-weight: 600; color: #888; margin-bottom: 6px; letter-spacing: 0.05em; }
 
+/* 部屋行：4階を基準に全フロア同じ幅 */
 .rooms { display: flex; gap: 6px; align-items: stretch; width: 100%; }
 .room-sep   { width: 10px; flex-shrink: 0; }
-.room-blank { width: var(--card-w, 72px); flex-shrink: 0; }
 
-/* 部屋カード：4階の11枚基準で幅を計算 */
+/* blank と room-card は同じ flex:1 で幅を揃える */
+.room-blank { flex: 1; }
 .room-card {
-  width: var(--card-w, 72px); flex-shrink: 0;
+  flex: 1;
   border-radius: 8px; border: 2px solid #CCC;
   background: #E8E8E8;
-  padding: 12px 4px 8px;
+  padding: 8px 4px;
   display: flex; flex-direction: column;
-  align-items: center; gap: 5px;
+  align-items: center; gap: 4px;
   position: relative; user-select: none;
   aspect-ratio: 1 / 1; justify-content: center;
 }
-.room-card.clickable { cursor: pointer; border-color: #FF9800; background: #FFF3E0; }
-.room-card.clickable:active { filter: brightness(0.93); transform: scale(0.96); }
 .room-card.s-waiting { border-color: #FF9800; background: #FFF3E0; cursor: pointer; }
-.room-card.s-done    { border-color: #66BB6A; background: #E8F5E9; }
+.room-card.s-waiting:active { filter: brightness(0.93); transform: scale(0.96); }
+.room-card.s-out     { border-color: #FFCC80; background: #FFF8E1; cursor: pointer; }
+.room-card.s-out:active { filter: brightness(0.93); transform: scale(0.96); }
+.room-card.s-done    { border-color: #66BB6A; background: #E8F5E9; cursor: pointer; }
+.room-card.s-done:active { filter: brightness(0.93); transform: scale(0.96); }
 
-.room-num { font-size: clamp(13px, 2vw, 18px); font-weight: 700; line-height: 1; color: #BBB; }
-.room-card.clickable .room-num { color: #E65100; }
+.room-num { font-size: clamp(11px, 1.8vw, 18px); font-weight: 700; line-height: 1; color: #BBB; }
+.room-card.s-out     .room-num { color: #8D5700; }
 .room-card.s-waiting .room-num { color: #E65100; }
 .room-card.s-done    .room-num { color: #2E7D32; }
-.room-num.small { font-size: clamp(11px, 1.5vw, 14px); }
+.room-num.small { font-size: clamp(9px, 1.3vw, 13px); }
 
 .room-badge {
   font-size: 9px; font-weight: 600;
-  padding: 2px 5px; border-radius: 6px; white-space: nowrap;
+  padding: 2px 4px; border-radius: 5px; white-space: nowrap;
 }
 .room-card.s-waiting .room-badge { background: #FFE0B2; color: #BF360C; }
 .room-card.s-done    .room-badge { background: #C8E6C9; color: #1B5E20; }
 
-.wait-mark { position: absolute; top: 4px; right: 5px; font-size: 10px; }
-.done-mark { position: absolute; top: 4px; right: 5px; font-size: 11px; color: #2E7D32; font-weight: 700; }
-
-/* ダイアログ */
-.overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.4); z-index: 300;
-  align-items: center; justify-content: center;
-}
-.overlay.open { display: flex; }
-.dialog-box {
-  background: #fff; border-radius: 14px;
-  padding: 24px 20px; width: 280px; text-align: center;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-}
-.dialog-room { font-size: 26px; font-weight: 700; color: #E65100; margin-bottom: 6px; }
-.dialog-msg  { font-size: 14px; color: #444; line-height: 1.7; margin-bottom: 20px; }
-.dialog-btns { display: flex; flex-direction: column; gap: 8px; }
-.btn-confirm-ok {
-  padding: 12px; font-size: 14px; font-weight: 700;
-  border-radius: 10px; cursor: pointer; border: none;
-  background: #FF9800; color: #fff;
-}
-.btn-confirm-ok:active { background: #E65100; }
-.btn-confirm-cancel {
-  padding: 10px; font-size: 13px;
-  border-radius: 10px; cursor: pointer; border: none;
-  background: #F0F0F0; color: #666;
-}
+.wait-mark { position: absolute; top: 3px; right: 4px; font-size: 9px; }
+.done-mark { position: absolute; top: 3px; right: 4px; font-size: 10px; color: #2E7D32; font-weight: 700; }
 
 /* QRモーダル */
 .qr-overlay {
@@ -132,33 +110,36 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
   <div class="header">
     <span class="title">清掃確認ボード</span>
     <span class="sync-status" id="syncStatus">接続中…</span>
-    <div class="header-right" style="display:flex;gap:8px;align-items:center;">
+    <div class="header-right">
       <div class="btn-qr" id="btnQR">📱 スマホ用QR</div>
     </div>
   </div>
 
-  <div class="counter-bar">
-    <div class="counter-item">
-      <div class="counter-num c-num-other" id="cntOut">0</div>
-      <div class="counter-label">CO済（未依頼）</div>
+  <div class="content-wrap">
+    <div class="counter-bar">
+      <div class="counter-item">
+        <div class="counter-num c-num-other" id="cntOut">0</div>
+        <div class="counter-label">CO済（未依頼）</div>
+      </div>
+      <div class="counter-item">
+        <div class="counter-num c-num-waiting" id="cntWaiting">0</div>
+        <div class="counter-label">確認依頼中</div>
+      </div>
+      <div class="counter-item">
+        <div class="counter-num c-num-done" id="cntDone">0</div>
+        <div class="counter-label">確認済み</div>
+      </div>
     </div>
-    <div class="counter-item">
-      <div class="counter-num c-num-waiting" id="cntWaiting">0</div>
-      <div class="counter-label">確認依頼中</div>
-    </div>
-    <div class="counter-item">
-      <div class="counter-num c-num-done" id="cntDone">0</div>
-      <div class="counter-label">確認済み</div>
-    </div>
-  </div>
 
-  <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#FF9800"></div>確認依頼中</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#66BB6A"></div>確認済み</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#E8E8E8;border:1px solid #CCC"></div>その他</div>
-  </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#FF9800"></div>確認依頼中</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#66BB6A"></div>確認済み</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#FFF8E1;border:1px solid #FFCC80"></div>CO済（未依頼）</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#E8E8E8;border:1px solid #CCC"></div>その他</div>
+    </div>
 
-  <div id="floors"></div>
+    <div id="floors"></div>
+  </div>
 </div>
 
 <div class="qr-overlay" id="qrOverlay">
@@ -190,7 +171,6 @@ const db   = getDatabase(app);
 const auth = getAuth(app);
 signInAnonymously(auth);
 
-// 'sep'=区切り, 'blank'=存在しない部屋のスペース
 const FLOORS = [
   { label: '4階', rooms: ['401','402','403','405','sep','406','407','408','410','411','412'] },
   { label: '3階', rooms: ['301','302','303','305','sep','306','307','308','310','311','312'] },
@@ -204,7 +184,6 @@ FLOORS.forEach(f => f.rooms.forEach(r => {
 const state = {};
 allRooms.forEach(r => { state[r] = { status: 'unused', clean_status: '' }; });
 
-let pendingRoom = null;
 const syncEl = document.getElementById('syncStatus');
 
 onValue(ref(db, 'rooms'), snap => {
@@ -213,7 +192,7 @@ onValue(ref(db, 'rooms'), snap => {
     state[r].status       = data[r]?.status       || 'unused';
     state[r].clean_status = data[r]?.clean_status || '';
   });
-  renderAll();   // データ受信後に全体再描画（クリックイベントも最新状態で再設定）
+  renderAll();
   updateCounters();
   syncEl.textContent = '● 同期中';
   syncEl.className = 'sync-status ok';
@@ -246,10 +225,7 @@ function updateCounters() {
 function makeCard(r) {
   const cs = getCardState(r);
   const card = document.createElement('div');
-  card.className = 'room-card'
-    + (cs === 'waiting' ? ' s-waiting' : '')
-    + (cs === 'done'    ? ' s-done'    : '')
-    + (cs === 'out'     ? ' clickable' : '');
+  card.className = 'room-card s-' + cs;
 
   const waitMark = document.createElement('span');
   waitMark.className = 'wait-mark';
@@ -267,27 +243,24 @@ function makeCard(r) {
   badge.className = 'room-badge';
   if (cs === 'waiting') { badge.textContent = '依頼中'; badge.style.display = ''; }
   else if (cs === 'done') { badge.textContent = '確認済み'; badge.style.display = ''; }
-  else { badge.textContent = ''; badge.style.display = 'none'; }
+  else { badge.style.display = 'none'; }
 
   card.appendChild(waitMark);
   card.appendChild(doneMark);
   card.appendChild(numEl);
   card.appendChild(badge);
 
-  // 全クリア
+  // クリックでローテーション（out→waiting→done→未設定）
   if (cs === 'out') {
     card.addEventListener('click', () => {
-      state[r].clean_status = 'waiting';
       update(ref(db, 'rooms/' + r), { clean_status: 'waiting' });
     });
   } else if (cs === 'waiting') {
     card.addEventListener('click', () => {
-      state[r].clean_status = 'done';
       update(ref(db, 'rooms/' + r), { clean_status: 'done' });
     });
   } else if (cs === 'done') {
     card.addEventListener('click', () => {
-      state[r].clean_status = '';
       update(ref(db, 'rooms/' + r), { clean_status: '' });
     });
   }
@@ -321,24 +294,6 @@ function renderAll() {
     container.appendChild(floorDiv);
   });
 }
-
-// 4階（11枚＋区切り1個）を基準にカード幅を計算してCSS変数にセット
-function calcCardWidth() {
-  const appW = document.querySelector('.app').clientWidth - 24;
-  const cardCount = 11;
-  const sepCount  = 1;
-  const gapCount  = cardCount + sepCount - 1;
-  const w = Math.floor((appW - sepCount * 10 - gapCount * 6) / cardCount);
-  const rowW = cardCount * w + sepCount * 10 + gapCount * 6;
-  // カウンター3枚でrow幅を均等に割る（gap 6px×2を引く）
-  const counterW = Math.floor((rowW - 6 * 2) / 3);
-  document.documentElement.style.setProperty('--card-w', w + 'px');
-  document.documentElement.style.setProperty('--counter-w', counterW + 'px');
-}
-
-// 初期描画（幅計算→描画の順を保証）
-calcCardWidth();
-window.addEventListener('resize', () => { calcCardWidth(); renderAll(); });
 
 document.getElementById('btnQR').addEventListener('click', () => {
   document.getElementById('qrOverlay').classList.add('open');
