@@ -180,7 +180,7 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
 
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
-    <div class="confirm-msg">全室を未利用にリセットし、<br>メモも消去します。<br>よろしいですか？</div>
+    <div class="confirm-msg" id="confirmMsg">全室を未利用にリセットし、<br>メモも消去します。<br>よろしいですか？</div>
     <div class="confirm-btns">
       <div class="confirm-btn confirm-cancel" id="confirmCancel">キャンセル</div>
       <div class="confirm-btn confirm-ok" id="confirmOk">リセット</div>
@@ -418,7 +418,6 @@ function doReset(){
   update(ref(db),updates);
   for(let i=0;i<7;i++){const ta=document.getElementById('memo-left-'+i);if(ta)ta.value='';}
   resetShuttle();
-  document.getElementById('confirmOverlay').classList.remove('open');
 }
 function clickRoom(r){
   const s=state[r];
@@ -475,13 +474,31 @@ function renderAll(){
     });
     floorDiv.appendChild(rowEl);container.appendChild(floorDiv);
   });
-  document.getElementById('btnReset').addEventListener('click',()=>document.getElementById('confirmOverlay').classList.add('open'));
-  document.getElementById('btnUnoccupied').addEventListener('click',doUnoccupied);
+  let confirmAction = null;
+  function openConfirm(msg, okLabel, action){
+    document.getElementById('confirmMsg').innerHTML = msg;
+    document.getElementById('confirmOk').textContent = okLabel;
+    confirmAction = action;
+    document.getElementById('confirmOverlay').classList.add('open');
+  }
+  document.getElementById('btnReset').addEventListener('click', ()=>openConfirm(
+    '全室を未利用にリセットし、<br>メモも消去します。<br>よろしいですか？', 'リセット', doReset
+  ));
+  document.getElementById('btnUnoccupied').addEventListener('click', ()=>openConfirm(
+    '全室を未着に変更します。<br>よろしいですか？', '未着にする', doUnoccupied
+  ));
   document.getElementById('btnPrep').addEventListener('click',()=>toggleMode('prep'));
   document.getElementById('btnIn').addEventListener('click',()=>toggleMode('in'));
   document.getElementById('btnOut').addEventListener('click',()=>toggleMode('out'));
-  document.getElementById('confirmOk').addEventListener('click',doReset);
-  document.getElementById('confirmCancel').addEventListener('click',()=>document.getElementById('confirmOverlay').classList.remove('open'));
+  document.getElementById('confirmOk').addEventListener('click',()=>{
+    if(confirmAction) confirmAction();
+    document.getElementById('confirmOverlay').classList.remove('open');
+    confirmAction = null;
+  });
+  document.getElementById('confirmCancel').addEventListener('click',()=>{
+    document.getElementById('confirmOverlay').classList.remove('open');
+    confirmAction = null;
+  });
   // 部屋+サブバーの高さをシャトルバスに同期
   function syncShuttleHeight(){
     const anyRoom=document.querySelector('.room-wrapper:not(.blank) .room');
