@@ -22,15 +22,8 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
   user-select: none;
 }
 .btn-qr:active { background: #FFE0B2; }
-.btn-clear {
-  padding: 8px 14px; font-size: 13px; font-weight: 600;
-  border-radius: 8px; cursor: pointer;
-  border: 1.5px solid #999; background: #fff; color: #555;
-  user-select: none;
-}
-.btn-clear:active { background: #f0f0f0; }
 
-.counter-bar { display: flex; gap: 6px; margin-bottom: 12px; width: var(--row-w, 100%); }
+.counter-bar { display: flex; gap: 6px; margin-bottom: 12px; width: var(--row-w, auto); }
 .counter-item {
   flex: 1; text-align: center; background: #fff;
   border-radius: 8px; padding: 8px 4px; border: 1px solid #E0E0E0;
@@ -139,7 +132,6 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
     <span class="title">清掃確認ボード</span>
     <span class="sync-status" id="syncStatus">接続中…</span>
     <div class="header-right" style="display:flex;gap:8px;align-items:center;">
-      <div class="btn-clear" id="btnClear">全クリア</div>
       <div class="btn-qr" id="btnQR">📱 スマホ用QR</div>
     </div>
   </div>
@@ -329,13 +321,6 @@ function renderAll() {
   });
 }
 
-// 全クリア
-document.getElementById('btnClear').addEventListener('click', () => {
-  const updates = {};
-  allRooms.forEach(r => { updates['rooms/' + r + '/clean_status'] = ''; });
-  update(ref(db), updates);
-});
-
 // 4階（11枚＋区切り1個）を基準にカード幅を計算してCSS変数にセット
 function calcCardWidth() {
   const appW = document.querySelector('.app').clientWidth - 24;
@@ -347,6 +332,8 @@ function calcCardWidth() {
   document.documentElement.style.setProperty('--card-w', w + 'px');
   document.documentElement.style.setProperty('--row-w', rowW + 'px');
 }
+
+// 初期描画（幅計算→描画の順を保証）
 calcCardWidth();
 window.addEventListener('resize', () => { calcCardWidth(); renderAll(); });
 
