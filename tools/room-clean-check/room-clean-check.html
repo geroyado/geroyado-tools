@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>清掃確認ボード — 下呂観光ホテル</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'Hiragino Kaku Gothic Pro', Meiryo, sans-serif; }
+
+.app { width: 100%; padding: 10px 12px 40px; max-width: 900px; margin: 0 auto; }
+
+/* ヘッダー */
+.header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.title { font-size: 18px; font-weight: 700; color: #222; }
+.sync-status { font-size: 11px; color: #999; }
+.sync-status.ok  { color: #00A040; }
+.sync-status.err { color: #CC3300; }
+.header-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.btn-qr {
+  padding: 8px 14px; font-size: 13px; font-weight: 600;
+  border-radius: 8px; cursor: pointer;
+  border: 1.5px solid #B85C00; background: #FFF3E0; color: #B85C00;
+  user-select: none;
+}
+.btn-qr:active { background: #FFE0B2; }
+
+/* カウンター */
+.counter-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+.counter-item {
+  flex: 1; text-align: center; background: #fff;
+  border-radius: 8px; padding: 8px 4px;
+  border: 1px solid #E0E0E0;
+}
+.counter-num   { font-size: 24px; font-weight: 700; }
+.counter-label { font-size: 10px; color: #888; margin-top: 1px; }
+.c-num-waiting { color: #E65100; }
+.c-num-done    { color: #2E7D32; }
+.c-num-other   { color: #999; }
+
+/* 凡例 */
+.legend { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #555; }
+.legend-dot { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; }
+
+/* フロア */
+.floor { margin-bottom: 14px; }
+.floor-label { font-size: 12px; font-weight: 600; color: #888; margin-bottom: 6px; letter-spacing: 0.05em; }
+
+/* 部屋行：フレックスで横並び、区切りを挟む */
+.rooms {
+  display: flex; gap: 6px; align-items: stretch; width: 100%;
+}
+.room-sep {
+  width: 10px; flex-shrink: 0;
+}
+
+/* 部屋カード */
+.room-card {
+  flex: 1; min-width: 0;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  padding: 12px 4px 8px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 5px;
+  position: relative; user-select: none;
+  min-height: 76px; justify-content: center;
+}
+.room-card.clickable { cursor: pointer; }
+.room-card.clickable:active { filter: brightness(0.93); transform: scale(0.96); }
+
+.room-num {
+  font-size: clamp(13px, 2vw, 18px); font-weight: 700; line-height: 1;
+}
+.room-num.small { font-size: clamp(11px, 1.5vw, 14px); }
+.room-badge {
+  font-size: 9px; font-weight: 600;
+  padding: 2px 5px; border-radius: 6px; white-space: nowrap;
+}
+
+/* 状態カラー */
+.s-unused   { background: #E8E8E8; border-color: #CCC; }
+.s-unused   .room-num   { color: #BBB; }
+.s-unused   .room-badge { background: #DDD; color: #AAA; }
+
+.s-inuse    { background: #EEF4FF; border-color: #99BBEE; }
+.s-inuse    .room-num   { color: #2255AA; }
+.s-inuse    .room-badge { background: #C8D8F8; color: #1A3A88; }
+
+.s-out      { background: #FFF8E1; border-color: #FFCC80; }
+.s-out      .room-num   { color: #8D5700; }
+.s-out      .room-badge { background: #FFE082; color: #7A4500; }
+
+.s-waiting  { background: #FFF3E0; border-color: #FF9800; }
+.s-waiting  .room-num   { color: #E65100; }
+.s-waiting  .room-badge { background: #FFE0B2; color: #BF360C; }
+
+.s-done     { background: #E8F5E9; border-color: #66BB6A; }
+.s-done     .room-num   { color: #2E7D32; }
+.s-done     .room-badge { background: #C8E6C9; color: #1B5E20; }
+
+.wait-mark { position: absolute; top: 4px; right: 5px; font-size: 10px; }
+.done-mark { position: absolute; top: 4px; right: 5px; font-size: 11px; color: #2E7D32; font-weight: 700; }
+
+/* 確認ダイアログ */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4); z-index: 300;
+  align-items: center; justify-content: center;
+}
+.overlay.open { display: flex; }
+.dialog-box {
+  background: #fff; border-radius: 14px;
+  padding: 24px 20px; width: 280px; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+.dialog-room { font-size: 26px; font-weight: 700; color: #E65100; margin-bottom: 6px; }
+.dialog-msg  { font-size: 14px; color: #444; line-height: 1.7; margin-bottom: 20px; }
+.dialog-btns { display: flex; flex-direction: column; gap: 8px; }
+.btn-confirm-ok {
+  padding: 12px; font-size: 14px; font-weight: 700;
+  border-radius: 10px; cursor: pointer; border: none;
+  background: #FF9800; color: #fff;
+}
+.btn-confirm-ok:active { background: #E65100; }
+.btn-confirm-cancel {
+  padding: 10px; font-size: 13px; font-weight: 500;
+  border-radius: 10px; cursor: pointer; border: none;
+  background: #F0F0F0; color: #666;
+}
+
+/* QRモーダル */
+.qr-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); z-index: 400;
+  align-items: center; justify-content: center;
+}
+.qr-overlay.open { display: flex; }
+.qr-box {
+  background: #fff; border-radius: 14px;
+  padding: 28px 24px; width: 300px; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.qr-title { font-size: 15px; font-weight: 700; color: #222; margin-bottom: 4px; }
+.qr-sub   { font-size: 11px; color: #888; line-height: 1.6; margin-bottom: 16px; }
+#qr-canvas { margin: 0 auto 16px; display: block; }
+.qr-close {
+  padding: 8px 24px; font-size: 13px; font-weight: 500;
+  border-radius: 8px; cursor: pointer;
+  border: 1.5px solid #CCC; background: #F5F5F5; color: #666;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <span class="title">清掃確認ボード</span>
+    <span class="sync-status" id="syncStatus">接続中…</span>
+    <div class="header-right">
+      <div class="btn-qr" id="btnQR">📱 スマホ用QR</div>
+    </div>
+  </div>
+
+  <div class="counter-bar">
+    <div class="counter-item">
+      <div class="counter-num c-num-waiting" id="cntWaiting">0</div>
+      <div class="counter-label">確認依頼中</div>
+    </div>
+    <div class="counter-item">
+      <div class="counter-num c-num-done" id="cntDone">0</div>
+      <div class="counter-label">確認済み</div>
+    </div>
+    <div class="counter-item">
+      <div class="counter-num c-num-other" id="cntOut">0</div>
+      <div class="counter-label">CO済（未依頼）</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#FF9800;border:2px solid #FF9800"></div>確認依頼中</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#66BB6A;border:2px solid #66BB6A"></div>確認済み</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#FFF8E1;border:2px solid #FFCC80"></div>CO済（未依頼）</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#EEF4FF;border:2px solid #99BBEE"></div>使用中</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E8E8E8;border:2px solid #CCC"></div>未使用</div>
+  </div>
+
+  <div id="floors"></div>
+
+</div>
+
+<!-- 確認依頼ダイアログ -->
+<div class="overlay" id="confirmOverlay">
+  <div class="dialog-box">
+    <div class="dialog-room" id="dialogRoom"></div>
+    <div class="dialog-msg" id="dialogMsg"></div>
+    <div class="dialog-btns">
+      <div class="btn-confirm-ok" id="dialogOk">確認依頼を出す</div>
+      <div class="btn-confirm-cancel" id="dialogCancel">キャンセル</div>
+    </div>
+  </div>
+</div>
+
+<!-- QRモーダル -->
+<div class="qr-overlay" id="qrOverlay">
+  <div class="qr-box">
+    <div class="qr-title">スマホ用 確認画面</div>
+    <div class="qr-sub">確認担当者にこのQRを読み取ってもらってください。<br>確認済みへの変更のみできます。</div>
+    <div id="qr-canvas"></div>
+    <div class="qr-close" id="qrClose">閉じる</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBHGHSqKn_enfNstKvlm3tMnanlCrMQJmk",
+  authDomain: "gero-room-status.firebaseapp.com",
+  databaseURL: "https://gero-room-status-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "gero-room-status",
+  storageBucket: "gero-room-status.firebasestorage.app",
+  messagingSenderId: "404284538951",
+  appId: "1:404284538951:web:2f56016b2837c21b373162"
+};
+const app  = initializeApp(firebaseConfig);
+const db   = getDatabase(app);
+const auth = getAuth(app);
+signInAnonymously(auth);
+
+// 'sep'で区切りを表現
+const FLOORS = [
+  { label: '4階', rooms: ['401','402','403','405','sep','406','407','408','410','411','412'] },
+  { label: '3階', rooms: ['301','302','303','305','sep','306','307','308','310','311','312'] },
+  { label: '2階', rooms: ['201','203','205','sep','206','207','208','210','cabin'] }
+];
+const allRooms = [];
+FLOORS.forEach(f => f.rooms.forEach(r => { if(r !== 'sep') allRooms.push(r); }));
+
+const state = {};
+allRooms.forEach(r => { state[r] = { status: 'unused', clean_status: '' }; });
+
+let pendingRoom = null;
+const syncEl = document.getElementById('syncStatus');
+
+onValue(ref(db, 'rooms'), snap => {
+  const data = snap.val() || {};
+  allRooms.forEach(r => {
+    state[r].status       = data[r]?.status       || 'unused';
+    state[r].clean_status = data[r]?.clean_status || '';
+    renderCard(r);
+  });
+  updateCounters();
+  syncEl.textContent = '● 同期中';
+  syncEl.className = 'sync-status ok';
+}, () => {
+  syncEl.textContent = '● 接続エラー';
+  syncEl.className = 'sync-status err';
+});
+
+function getCardState(r) {
+  const s = state[r];
+  if (s.clean_status === 'done')    return 'done';
+  if (s.clean_status === 'waiting') return 'waiting';
+  if (s.status === 'out')           return 'out';
+  if (['staying','inroom','h8','h9','unoccupied'].includes(s.status)) return 'inuse';
+  return 'unused';
+}
+
+function getBadgeText(r) {
+  const cs = state[r].clean_status;
+  if (cs === 'done')    return '確認済み';
+  if (cs === 'waiting') return '依頼中';
+  return '';
+}
+
+function renderCard(r) {
+  const card = document.getElementById('card-' + r);
+  if (!card) return;
+  const cs = getCardState(r);
+  card.className = 'room-card s-' + cs + (cs === 'out' ? ' clickable' : '');
+  const badge    = card.querySelector('.room-badge');
+  const waitMark = card.querySelector('.wait-mark');
+  const doneMark = card.querySelector('.done-mark');
+  const txt = getBadgeText(r);
+  badge.textContent   = txt;
+  badge.style.display = txt ? '' : 'none';
+  waitMark.textContent = cs === 'waiting' ? '🔔' : '';
+  doneMark.style.display = cs === 'done' ? '' : 'none';
+}
+
+function updateCounters() {
+  let waiting = 0, done = 0, out = 0;
+  allRooms.forEach(r => {
+    const cs = getCardState(r);
+    if (cs === 'waiting') waiting++;
+    else if (cs === 'done') done++;
+    else if (cs === 'out') out++;
+  });
+  document.getElementById('cntWaiting').textContent = waiting;
+  document.getElementById('cntDone').textContent    = done;
+  document.getElementById('cntOut').textContent     = out;
+}
+
+function makeCard(r) {
+  const card = document.createElement('div');
+  const cs = getCardState(r);
+  card.className = 'room-card s-' + cs + (cs === 'out' ? ' clickable' : '');
+  card.id = 'card-' + r;
+
+  const waitMark = document.createElement('span');
+  waitMark.className = 'wait-mark';
+  waitMark.textContent = cs === 'waiting' ? '🔔' : '';
+
+  const doneMark = document.createElement('span');
+  doneMark.className = 'done-mark';
+  doneMark.textContent = '✓';
+  doneMark.style.display = cs === 'done' ? '' : 'none';
+
+  const numEl = document.createElement('div');
+  numEl.className = 'room-num' + (r === 'cabin' ? ' small' : '');
+  numEl.textContent = r === 'cabin' ? 'キャビン' : r;
+
+  const badge = document.createElement('div');
+  badge.className = 'room-badge';
+  const txt = getBadgeText(r);
+  badge.textContent   = txt;
+  badge.style.display = txt ? '' : 'none';
+
+  card.appendChild(waitMark);
+  card.appendChild(doneMark);
+  card.appendChild(numEl);
+  card.appendChild(badge);
+
+  card.addEventListener('click', () => {
+    if (getCardState(r) !== 'out') return;
+    pendingRoom = r;
+    const label = r === 'cabin' ? 'キャビン' : r + '号室';
+    document.getElementById('dialogRoom').textContent = label;
+    document.getElementById('dialogMsg').textContent  = 'に確認依頼を出してよろしいですか？';
+    document.getElementById('confirmOverlay').classList.add('open');
+  });
+
+  return card;
+}
+
+function renderAll() {
+  const container = document.getElementById('floors');
+  container.innerHTML = '';
+  FLOORS.forEach(f => {
+    const floorDiv = document.createElement('div');
+    floorDiv.className = 'floor';
+    floorDiv.innerHTML = `<div class="floor-label">${f.label}</div>`;
+    const rowEl = document.createElement('div');
+    rowEl.className = 'rooms';
+    f.rooms.forEach(r => {
+      if (r === 'sep') {
+        const sep = document.createElement('div');
+        sep.className = 'room-sep';
+        rowEl.appendChild(sep);
+      } else {
+        rowEl.appendChild(makeCard(r));
+      }
+    });
+    floorDiv.appendChild(rowEl);
+    container.appendChild(floorDiv);
+  });
+}
+renderAll();
+
+document.getElementById('dialogOk').addEventListener('click', () => {
+  if (!pendingRoom) return;
+  update(ref(db, 'rooms/' + pendingRoom), { clean_status: 'waiting' });
+  pendingRoom = null;
+  document.getElementById('confirmOverlay').classList.remove('open');
+});
+document.getElementById('dialogCancel').addEventListener('click', () => {
+  pendingRoom = null;
+  document.getElementById('confirmOverlay').classList.remove('open');
+});
+
+document.getElementById('btnQR').addEventListener('click', () => {
+  document.getElementById('qrOverlay').classList.add('open');
+  const canvas = document.getElementById('qr-canvas');
+  if (canvas.innerHTML) return;
+  const spUrl = location.href.replace('room-clean-check.html', 'room-clean-check-sp.html');
+  new window.QRCode(canvas, {
+    text: spUrl, width: 200, height: 200,
+    colorDark: '#1a1a1a', colorLight: '#ffffff',
+    correctLevel: window.QRCode.CorrectLevel.M
+  });
+});
+document.getElementById('qrClose').addEventListener('click', () => {
+  document.getElementById('qrOverlay').classList.remove('open');
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>清掃確認 — 下呂観光ホテル</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; min-height: 100%; background: #F5F5F5; font-family: 'Hiragino Kaku Gothic Pro', Meiryo, sans-serif; }
+
+.app { width: 100%; max-width: 480px; margin: 0 auto; padding: 16px 12px 48px; }
+
+.header { margin-bottom: 16px; }
+.title    { font-size: 22px; font-weight: 700; color: #1a1a1a; }
+.subtitle { font-size: 12px; color: #999; margin-top: 3px; }
+.sync-status { font-size: 11px; color: #999; margin-top: 4px; }
+.sync-status.ok  { color: #00A040; }
+.sync-status.err { color: #CC3300; }
+
+.counter-bar { display: flex; gap: 10px; margin-bottom: 16px; }
+.counter-item {
+  flex: 1; text-align: center; background: #fff;
+  border-radius: 10px; padding: 12px 4px;
+  border: 1px solid #E0E0E0;
+}
+.counter-num   { font-size: 28px; font-weight: 700; }
+.counter-label { font-size: 10px; color: #888; margin-top: 2px; }
+.c-num-waiting { color: #E65100; }
+.c-num-done    { color: #2E7D32; }
+
+.guide {
+  background: #FFF8E1; border: 1px solid #FFD54F;
+  border-radius: 8px; padding: 10px 14px;
+  font-size: 12px; color: #7A5800; line-height: 1.8;
+  margin-bottom: 16px;
+}
+
+/* フロア別表示 */
+.floor { margin-bottom: 16px; }
+.floor-label {
+  font-size: 11px; font-weight: 600; color: #888;
+  letter-spacing: 0.05em; margin-bottom: 6px;
+}
+
+/* 部屋行：フレックス＋区切り */
+.rooms {
+  display: flex; gap: 8px; align-items: stretch;
+}
+.room-sep { width: 10px; flex-shrink: 0; }
+
+/* 部屋カード */
+.room-card {
+  flex: 1; min-width: 0;
+  border-radius: 12px;
+  border: 2px solid #FF9800;
+  background: #FFF3E0;
+  padding: 16px 4px 12px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 7px;
+  cursor: pointer; user-select: none;
+  min-height: 86px; justify-content: center;
+  transition: transform 0.08s;
+}
+.room-card:active { transform: scale(0.94); background: #FFE0B2; }
+
+.room-card.done {
+  border-color: #66BB6A; background: #E8F5E9; cursor: default;
+}
+.room-card.done:active { transform: none; background: #E8F5E9; }
+
+/* 未表示（確認待ちでも確認済みでもない） */
+.room-card.hidden-card {
+  border-color: transparent; background: transparent;
+  cursor: default; pointer-events: none;
+}
+.room-card.hidden-card:active { transform: none; }
+
+.room-num {
+  font-size: clamp(15px, 4vw, 20px); font-weight: 700; line-height: 1;
+  color: #E65100;
+}
+.room-num.small { font-size: clamp(12px, 3vw, 15px); }
+.room-card.done .room-num { color: #2E7D32; }
+.room-card.hidden-card .room-num { display: none; }
+
+.room-status {
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 7px; white-space: nowrap;
+}
+.room-card:not(.done):not(.hidden-card) .room-status { background: #FFE0B2; color: #BF360C; }
+.room-card.done .room-status { background: #C8E6C9; color: #1B5E20; }
+.room-card.hidden-card .room-status { display: none; }
+
+.empty-state {
+  text-align: center; padding: 48px 20px;
+  color: #BBB; font-size: 14px; line-height: 2.2;
+}
+.empty-icon { font-size: 52px; margin-bottom: 12px; }
+
+/* 確認ダイアログ */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 400;
+  align-items: flex-end; justify-content: center;
+}
+.overlay.open { display: flex; }
+.dialog-box {
+  background: #fff; border-radius: 20px 20px 0 0;
+  padding: 28px 24px calc(32px + env(safe-area-inset-bottom));
+  width: 100%; max-width: 480px; text-align: center;
+}
+.dialog-room { font-size: 32px; font-weight: 700; color: #E65100; margin-bottom: 6px; }
+.dialog-msg  { font-size: 15px; color: #444; line-height: 1.7; margin-bottom: 24px; }
+.btn-ok {
+  display: block; width: 100%;
+  padding: 16px; font-size: 16px; font-weight: 700;
+  border-radius: 12px; cursor: pointer; border: none;
+  background: #2E7D32; color: #fff; margin-bottom: 10px;
+}
+.btn-ok:active { background: #1B5E20; }
+.btn-cancel {
+  display: block; width: 100%;
+  padding: 14px; font-size: 14px; font-weight: 500;
+  border-radius: 12px; cursor: pointer; border: none;
+  background: #F0F0F0; color: #666;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="title">🧹 清掃確認</div>
+    <div class="subtitle">確認済みへの変更専用画面</div>
+    <div class="sync-status" id="syncStatus">接続中…</div>
+  </div>
+
+  <div class="counter-bar">
+    <div class="counter-item">
+      <div class="counter-num c-num-waiting" id="cntWaiting">0</div>
+      <div class="counter-label">確認待ち</div>
+    </div>
+    <div class="counter-item">
+      <div class="counter-num c-num-done" id="cntDone">0</div>
+      <div class="counter-label">確認済み</div>
+    </div>
+  </div>
+
+  <div class="guide">
+    部屋を確認したらカードをタップしてください。<br>
+    確認済みにする操作のみできます。
+  </div>
+
+  <div id="floors"></div>
+
+  <div id="emptyState" class="empty-state" style="display:none;">
+    <div class="empty-icon">✅</div>
+    確認待ちの部屋はありません
+  </div>
+
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="dialog-box">
+    <div class="dialog-room" id="dialogRoom"></div>
+    <div class="dialog-msg">を確認済みにしてよろしいですか？</div>
+    <button class="btn-ok" id="btnOk">確認済みにする</button>
+    <button class="btn-cancel" id="btnCancel">キャンセル</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBHGHSqKn_enfNstKvlm3tMnanlCrMQJmk",
+  authDomain: "gero-room-status.firebaseapp.com",
+  databaseURL: "https://gero-room-status-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "gero-room-status",
+  storageBucket: "gero-room-status.firebasestorage.app",
+  messagingSenderId: "404284538951",
+  appId: "1:404284538951:web:2f56016b2837c21b373162"
+};
+const app  = initializeApp(firebaseConfig);
+const db   = getDatabase(app);
+const auth = getAuth(app);
+signInAnonymously(auth);
+
+const FLOORS = [
+  { label: '4階', rooms: ['401','402','403','405','sep','406','407','408','410','411','412'] },
+  { label: '3階', rooms: ['301','302','303','305','sep','306','307','308','310','311','312'] },
+  { label: '2階', rooms: ['201','203','205','sep','206','207','208','210','cabin'] }
+];
+const allRooms = [];
+FLOORS.forEach(f => f.rooms.forEach(r => { if(r !== 'sep') allRooms.push(r); }));
+
+const state = {};
+allRooms.forEach(r => { state[r] = { clean_status: '' }; });
+
+let pendingRoom = null;
+const syncEl = document.getElementById('syncStatus');
+
+onValue(ref(db, 'rooms'), snap => {
+  const data = snap.val() || {};
+  allRooms.forEach(r => {
+    state[r].clean_status = data[r]?.clean_status || '';
+  });
+  renderAll();
+  syncEl.textContent = '● 同期中';
+  syncEl.className = 'sync-status ok';
+}, () => {
+  syncEl.textContent = '● 接続エラー';
+  syncEl.className = 'sync-status err';
+});
+
+function updateCounters() {
+  const waiting = allRooms.filter(r => state[r].clean_status === 'waiting').length;
+  const done    = allRooms.filter(r => state[r].clean_status === 'done').length;
+  document.getElementById('cntWaiting').textContent = waiting;
+  document.getElementById('cntDone').textContent    = done;
+  return { waiting, done };
+}
+
+function renderAll() {
+  const { waiting, done } = updateCounters();
+  const container = document.getElementById('floors');
+  const emptyState = document.getElementById('emptyState');
+
+  if (waiting === 0 && done === 0) {
+    container.innerHTML = '';
+    emptyState.style.display = '';
+    return;
+  }
+  emptyState.style.display = 'none';
+  container.innerHTML = '';
+
+  FLOORS.forEach(f => {
+    // このフロアに表示対象があるか確認
+    const hasTarget = f.rooms.some(r => r !== 'sep' && (state[r]?.clean_status === 'waiting' || state[r]?.clean_status === 'done'));
+    if (!hasTarget) return;
+
+    const floorDiv = document.createElement('div');
+    floorDiv.className = 'floor';
+    floorDiv.innerHTML = `<div class="floor-label">${f.label}</div>`;
+
+    const rowEl = document.createElement('div');
+    rowEl.className = 'rooms';
+
+    f.rooms.forEach(r => {
+      if (r === 'sep') {
+        const sep = document.createElement('div');
+        sep.className = 'room-sep';
+        rowEl.appendChild(sep);
+        return;
+      }
+      const cs = state[r].clean_status;
+      const card = document.createElement('div');
+
+      if (cs === 'waiting' || cs === 'done') {
+        card.className = 'room-card' + (cs === 'done' ? ' done' : '');
+
+        const numEl = document.createElement('div');
+        numEl.className = 'room-num' + (r === 'cabin' ? ' small' : '');
+        numEl.textContent = r === 'cabin' ? 'キャビン' : r;
+
+        const statusEl = document.createElement('div');
+        statusEl.className = 'room-status';
+        statusEl.textContent = cs === 'done' ? '確認済み ✓' : '確認待ち';
+
+        card.appendChild(numEl);
+        card.appendChild(statusEl);
+
+        if (cs === 'waiting') {
+          card.addEventListener('click', () => {
+            pendingRoom = r;
+            document.getElementById('dialogRoom').textContent =
+              r === 'cabin' ? 'キャビン' : r + '号室';
+            document.getElementById('overlay').classList.add('open');
+          });
+        }
+      } else {
+        // 対象外の部屋はスペースとして確保（区切りのズレを防ぐ）
+        card.className = 'room-card hidden-card';
+        const numEl = document.createElement('div');
+        numEl.className = 'room-num';
+        numEl.textContent = r;
+        card.appendChild(numEl);
+      }
+
+      rowEl.appendChild(card);
+    });
+
+    floorDiv.appendChild(rowEl);
+    container.appendChild(floorDiv);
+  });
+}
+
+document.getElementById('btnOk').addEventListener('click', () => {
+  if (!pendingRoom) return;
+  update(ref(db, 'rooms/' + pendingRoom), { clean_status: 'done' });
+  pendingRoom = null;
+  document.getElementById('overlay').classList.remove('open');
+});
+document.getElementById('btnCancel').addEventListener('click', () => {
+  pendingRoom = null;
+  document.getElementById('overlay').classList.remove('open');
+});
+</script>
+</body>
+</html>
