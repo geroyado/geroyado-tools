@@ -47,6 +47,7 @@ html, body { width: 100%; min-height: 100%; background: #F5F5F5; font-family: 'H
   display: flex; gap: 8px; align-items: stretch;
 }
 .room-sep { width: 10px; flex-shrink: 0; }
+.room-blank { flex: 1; }
 
 /* 部屋カード */
 .room-card {
@@ -191,10 +192,10 @@ signInAnonymously(auth);
 const FLOORS = [
   { label: '4階', rooms: ['401','402','403','405','sep','406','407','408','410','411','412'] },
   { label: '3階', rooms: ['301','302','303','305','sep','306','307','308','310','311','312'] },
-  { label: '2階', rooms: ['201','203','205','sep','206','207','208','210','cabin'] }
+  { label: '2階', rooms: ['201','blank','203','205','sep','206','207','208','210','blank','cabin'] }
 ];
 const allRooms = [];
-FLOORS.forEach(f => f.rooms.forEach(r => { if(r !== 'sep') allRooms.push(r); }));
+FLOORS.forEach(f => f.rooms.forEach(r => { if(r !== 'sep' && r !== 'blank') allRooms.push(r); }));
 
 const state = {};
 allRooms.forEach(r => { state[r] = { clean_status: '' }; });
@@ -255,7 +256,13 @@ function renderAll() {
         rowEl.appendChild(sep);
         return;
       }
-      const cs = state[r].clean_status;
+      if (r === 'blank') {
+        const blank = document.createElement('div');
+        blank.className = 'room-blank';
+        rowEl.appendChild(blank);
+        return;
+      }
+      const cs = state[r]?.clean_status || '';
       const card = document.createElement('div');
 
       if (cs === 'waiting' || cs === 'done') {
@@ -281,12 +288,8 @@ function renderAll() {
           });
         }
       } else {
-        // 対象外の部屋はスペースとして確保（区切りのズレを防ぐ）
+        // 対象外の部屋はスペースとして確保
         card.className = 'room-card hidden-card';
-        const numEl = document.createElement('div');
-        numEl.className = 'room-num';
-        numEl.textContent = r;
-        card.appendChild(numEl);
       }
 
       rowEl.appendChild(card);
