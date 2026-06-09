@@ -64,6 +64,8 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
 .room-card.s-waiting:active { filter: brightness(0.93); transform: scale(0.96); }
 .room-card.s-out     { border-color: #FFCC80; background: #FFF8E1; cursor: pointer; }
 .room-card.s-out:active { filter: brightness(0.93); transform: scale(0.96); }
+.room-card.s-other   { border-color: #CCC; background: #E8E8E8; cursor: pointer; }
+.room-card.s-other:active { filter: brightness(0.93); transform: scale(0.96); }
 .room-card.s-done    { border-color: #66BB6A; background: #E8F5E9; cursor: pointer; }
 .room-card.s-done:active { filter: brightness(0.93); transform: scale(0.96); }
 
@@ -250,8 +252,8 @@ function makeCard(r) {
   card.appendChild(numEl);
   card.appendChild(badge);
 
-  // クリックでローテーション（out→waiting→done→未設定）
-  if (cs === 'out') {
+  // クリックでローテーション（out/unused→waiting→done→元に戻す）
+  if (cs === 'out' || cs === 'other') {
     card.addEventListener('click', () => {
       update(ref(db, 'rooms/' + r), { clean_status: 'waiting' });
     });
