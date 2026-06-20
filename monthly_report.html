@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>月次概況 — 下呂観光ホテル</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    background: #1a2332;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bar {
+    background: #1a2332;
+    color: #e8ecf0;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .bar-back {
+    color: #8fa3bb;
+    text-decoration: none;
+    font-size: 13px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    transition: background 0.12s;
+  }
+  .bar-back:hover { background: rgba(255,255,255,0.08); }
+  .bar-title { font-size: 14px; font-weight: 500; flex: 1; }
+  .bar-caption { font-size: 11px; color: #8fa3bb; }
+
+  iframe {
+    flex: 1;
+    width: 100%;
+    border: none;
+    display: block;
+  }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <a class="bar-back" href="index.html">‹ ポータル</a>
+  <div class="bar-title">📋 月次概況</div>
+  <div class="bar-caption" id="caption">読み込み中…</div>
+</div>
+<iframe id="pdf-frame" title="月次概況PDF"></iframe>
+
+<script>
+  const REPO     = 'geroyado/geroyado-tools';
+  const BRANCH   = 'main';
+  const PDF_URL  = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/docs/report/monthly_report_latest.pdf`;
+  const META_URL = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/data/report_meta.json`;
+
+  document.getElementById('pdf-frame').src = PDF_URL + '?t=' + Date.now();
+
+  (async function() {
+    try {
+      const res = await fetch(META_URL + '?t=' + Date.now());
+      if (!res.ok) throw new Error();
+      const meta = await res.json();
+      const m = (meta.filename || '').match(/月次概況_(\d{4})(\d{2})\.pdf/);
+      if (m) {
+        const year = parseInt(m[1], 10), month = parseInt(m[2], 10);
+        const fy   = (month >= 11) ? year : year - 1;
+        const saved = new Date(meta.updatedAt);
+        const fmtSaved = `${saved.getMonth()+1}/${saved.getDate()} ${String(saved.getHours()).padStart(2,'0')}:${String(saved.getMinutes()).padStart(2,'0')}更新`;
+        document.getElementById('caption').textContent = `${fy}年度 ${month}月度版（11月〜${month}月）· ${fmtSaved}`;
+        document.title = `月次概況 ${fy}年度${month}月度版 — 下呂観光ホテル`;
+      } else {
+        document.getElementById('caption').textContent = '';
+      }
+    } catch(e) {
+      document.getElementById('caption').textContent = '';
+    }
+  })();
+</script>
+</body>
+</html>
