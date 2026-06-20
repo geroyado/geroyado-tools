@@ -385,7 +385,7 @@
   (async function() {
     const cap = document.getElementById('occ-caption');
     try {
-      const res = await fetch('https://raw.githubusercontent.com/geroyado/geroyado-tools/main/data/occ_data.json?t=' + Date.now());
+      const res = await fetch('https://geroyado.github.io/geroyado-tools/data/occ_data.json?t=' + Date.now());
       if (!res.ok) throw new Error();
       const { data, parsedAt } = await res.json();
       if (data && data.length > 0) {
@@ -409,12 +409,12 @@
     const cap = document.getElementById('report-caption');
     try {
       const res = await fetch(
-        'https://raw.githubusercontent.com/geroyado/geroyado-tools/main/data/report_meta.json?t=' + Date.now()
+        'https://geroyado.github.io/geroyado-tools/data/report_meta.json?t=' + Date.now()
       );
       if (!res.ok) throw new Error();
       const meta = await res.json();
       const m = (meta.filename || '').match(/月次概況_(\d{4})(\d{2})\.pdf/);
-      const PDF_URL = 'https://raw.githubusercontent.com/geroyado/geroyado-tools/main/docs/report/monthly_report_latest.pdf';
+      const PDF_URL = 'https://geroyado.github.io/geroyado-tools/docs/report/monthly_report_latest.pdf';
       document.getElementById('report-card').href = PDF_URL;
       if (m) {
         const year  = parseInt(m[1], 10);

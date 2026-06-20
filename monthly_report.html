@@ -54,10 +54,8 @@
 <iframe id="pdf-frame" title="月次概況PDF"></iframe>
 
 <script>
-  const REPO     = 'geroyado/geroyado-tools';
-  const BRANCH   = 'main';
-  const PDF_URL  = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/docs/report/monthly_report_latest.pdf`;
-  const META_URL = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/data/report_meta.json`;
+  const PDF_URL  = 'https://geroyado.github.io/geroyado-tools/docs/report/monthly_report_latest.pdf';
+  const META_URL = 'https://geroyado.github.io/geroyado-tools/data/report_meta.json';
 
   document.getElementById('pdf-frame').src = PDF_URL + '?t=' + Date.now();
 
