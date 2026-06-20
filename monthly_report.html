@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>月次概況 — 下呂観光ホテル</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f4f2ed;
+    --bg-card: #ffffff;
+    --bg-secondary: #f0ede8;
+    --text-primary: #1a1a1a;
+    --text-secondary: #5a5a5a;
+    --text-tertiary: #8a8a8a;
+    --border: rgba(0,0,0,0.12);
+    --border-med: rgba(0,0,0,0.22);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --header-bg: #1a2332;
+    --header-text: #e8ecf0;
+    --accent: #5B3278;
+    --accent-light: #EEE8F5;
+    --font: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141414;
+      --bg-card: #1e1e1e;
+      --bg-secondary: #252525;
+      --text-primary: #e8e8e8;
+      --text-secondary: #aaaaaa;
+      --text-tertiary: #666666;
+      --border: rgba(255,255,255,0.10);
+      --border-med: rgba(255,255,255,0.18);
+      --accent-light: #2a1f33;
+    }
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+  }
+
+  #app {
+    width: 100%;
+    max-width: 640px;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  }
+
+  /* ヘッダー */
+  .header {
+    background: var(--header-bg);
+    color: var(--header-text);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header-back {
+    color: #8fa3bb;
+    text-decoration: none;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background 0.12s;
+  }
+  .header-back:hover { background: rgba(255,255,255,0.08); }
+  .header-icon {
+    width: 32px; height: 32px;
+    background: #5B3278;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .header-body { flex: 1; }
+  .header h1 { font-size: 15px; font-weight: 500; margin-bottom: 2px; }
+  .header-sub { font-size: 11px; color: #8fa3bb; }
+
+  /* メタ情報バー */
+  .meta-bar {
+    background: var(--accent-light);
+    border-bottom: 0.5px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+  }
+  .meta-label {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 500;
+    flex: 1;
+  }
+  .meta-label.empty { color: var(--text-tertiary); font-weight: 400; }
+  .meta-actions { display: flex; gap: 8px; align-items: center; }
+  .btn-dl {
+    display: none;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--font);
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .btn-dl.visible { display: flex; }
+  .btn-dl:hover { opacity: 0.88; }
+
+  /* ドロップゾーン */
+  .drop-zone {
+    border: 1.5px dashed var(--border-med);
+    border-radius: var(--radius-md);
+    margin: 20px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: var(--bg-secondary);
+    position: relative;
+  }
+  .drop-zone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+  .drop-zone-icon { font-size: 32px; margin-bottom: 10px; }
+  .drop-zone-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+  }
+  .drop-zone-sub {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    line-height: 1.6;
+  }
+  #file-input { display: none; }
+
+  /* PDFビューア */
+  #viewer-wrap {
+    display: none;
+    flex-direction: column;
+    height: calc(100vh - 200px);
+    min-height: 400px;
+  }
+  #viewer-wrap.visible { display: flex; }
+  #pdf-frame {
+    flex: 1;
+    width: 100%;
+    border: none;
+    display: block;
+  }
+
+  .section-label {
+    padding: 12px 20px 8px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--bg-secondary);
+    border-top: 0.5px solid var(--border);
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  /* ヒント */
+  .hint-area {
+    padding: 16px 20px;
+  }
+  .hint {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    line-height: 1.8;
+  }
+  .hint strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .footer {
+    margin-top: 20px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 0 0 40px; }
+    #app { border-radius: 0; border-left: none; border-right: none; }
+    #viewer-wrap { height: calc(100vh - 160px); }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="header">
+    <a class="header-back" href="index.html">‹ 戻る</a>
+    <div class="header-icon">📋</div>
+    <div class="header-body">
+      <h1>月次概況</h1>
+      <div class="header-sub">下呂観光ホテル — 経営レポート</div>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <div class="meta-label empty" id="meta-label">PDFを読み込むと表示します</div>
+    <div class="meta-actions">
+      <a class="btn-dl" id="btn-download" href="#" download>↓ 保存</a>
+    </div>
+  </div>
+
+  <!-- ドロップゾーン（PDF未読込時に表示） -->
+  <div class="drop-zone" id="drop-zone">
+    <input type="file" id="file-input" accept="application/pdf">
+    <div class="drop-zone-icon">📄</div>
+    <div class="drop-zone-title">PDFをここにドラッグ＆ドロップ</div>
+    <div class="drop-zone-sub">
+      または <span style="color:var(--accent); text-decoration:underline; cursor:pointer;" id="browse-link">クリックして選択</span><br>
+      ローカルで生成した月次概況PDFを読み込みます
+    </div>
+  </div>
+
+  <!-- PDFビューア（読込後に表示） -->
+  <div id="viewer-wrap">
+    <iframe id="pdf-frame" title="月次概況PDF"></iframe>
+  </div>
+
+  <div class="section-label">使い方</div>
+  <div class="hint-area">
+    <div class="hint">
+      <strong>① ローカルでPDFを生成</strong>（月次概況PDF生成.bat を実行）<br>
+      <strong>② このページにPDFをドラッグ＆ドロップ</strong><br>
+      読み込んだPDFはこのブラウザに保存されます。次回以降はページを開くと自動で表示されます。<br>
+      新しい月のPDFをドロップすると上書きされます。
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  下呂観光ホテル スタッフポータル<br>
+  困ったことは責任者に確認してください
+</div>
+
+<script>
+  const STORAGE_KEY = 'monthly_report_pdf_b64';
+  const STORAGE_META = 'monthly_report_pdf_meta';
+
+  const dropZone   = document.getElementById('drop-zone');
+  const fileInput  = document.getElementById('file-input');
+  const viewerWrap = document.getElementById('viewer-wrap');
+  const pdfFrame   = document.getElementById('pdf-frame');
+  const metaLabel  = document.getElementById('meta-label');
+  const btnDl      = document.getElementById('btn-download');
+  const browseLink = document.getElementById('browse-link');
+
+  // ── ファイル名から年月キャプションを生成
+  function captionFromName(name) {
+    const m = name.match(/月次概況_(\d{4})(\d{2})\.pdf/);
+    if (!m) return name;
+    const year  = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10);
+    const fiscalYear = (month >= 11) ? year : year - 1;
+    return `${fiscalYear}年度 ${month}月度版（11月〜${month}月）`;
+  }
+
+  // ── PDFをビューアに表示
+  function showPdf(dataUrl, fileName) {
+    dropZone.style.display = 'none';
+    viewerWrap.classList.add('visible');
+
+    pdfFrame.src = dataUrl;
+
+    const caption = captionFromName(fileName);
+    metaLabel.textContent = caption;
+    metaLabel.classList.remove('empty');
+
+    // ダウンロードボタン設定
+    btnDl.href = dataUrl;
+    btnDl.download = fileName;
+    btnDl.classList.add('visible');
+  }
+
+  // ── ファイルを読み込んでlocalStorageに保存
+  function loadFile(file) {
+    if (file.type !== 'application/pdf') {
+      alert('PDFファイルを選択してください。');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const dataUrl = e.target.result;
+      try {
+        localStorage.setItem(STORAGE_KEY,  dataUrl);
+        localStorage.setItem(STORAGE_META, JSON.stringify({ name: file.name, savedAt: new Date().toISOString() }));
+      } catch(err) {
+        // localStorageが容量超過の場合はセッションのみで表示
+        console.warn('localStorage保存失敗（容量超過の可能性）:', err);
+      }
+      showPdf(dataUrl, file.name);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── 起動時：保存済みPDFがあれば復元
+  (function restoreFromStorage() {
+    try {
+      const dataUrl = localStorage.getItem(STORAGE_KEY);
+      const meta    = JSON.parse(localStorage.getItem(STORAGE_META) || 'null');
+      if (dataUrl && meta) {
+        showPdf(dataUrl, meta.name);
+        // 保存日時を補足表示
+        const saved = new Date(meta.savedAt);
+        const fmtSaved = `${saved.getMonth()+1}/${saved.getDate()} ${String(saved.getHours()).padStart(2,'0')}:${String(saved.getMinutes()).padStart(2,'0')} 読込`;
+        metaLabel.textContent += `　· ${fmtSaved}`;
+      }
+    } catch(e) { /* 無視 */ }
+  })();
+
+  // ── ドラッグ＆ドロップ
+  document.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  document.addEventListener('dragleave', (e) => {
+    if (!e.relatedTarget) dropZone.classList.remove('dragover');
+  });
+  document.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) loadFile(file);
+  });
+
+  // ── クリックで選択
+  dropZone.addEventListener('click', () => fileInput.click());
+  browseLink.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) loadFile(fileInput.files[0]);
+  });
+</script>
+</body>
+</html>

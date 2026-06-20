@@ -187,7 +187,7 @@
       </div>
       <div class="tool-arrow">›</div>
     </a>
-    <a class="tool-card" href="docs/report/月次概況_202604.pdf" target="_blank" rel="noopener">
+    <a class="tool-card" href="monthly_report.html">
       <div class="tool-icon" style="background:#EEE8F5;">📋</div>
       <div class="tool-body">
         <div class="tool-name">月次概況</div>
@@ -396,22 +396,25 @@
     }
   })();
 
-  // 月次概況キャプション：ファイル名から作成年月を生成
+  // 月次概況キャプション：monthly_report.html から読込済みメタ情報を取得
   (function() {
-    const anchor = document.querySelector('a[href*="月次概況"]');
-    if (!anchor) return;
-    const href = anchor.getAttribute('href');
-    const m = href.match(/月次概況_(\d{4})(\d{2})\.pdf/);
     const cap = document.getElementById('report-caption');
-    if (m) {
-      const year = parseInt(m[1], 10);
-      const month = parseInt(m[2], 10);
-      // 会計年度は11月始まり：月が11〜12なら前年度、1〜10なら当年度
-      const fiscalYear = (month >= 11) ? year : year - 1;
-      cap.textContent = `${fiscalYear}年度 ${month}月度版（11月〜${month}月）`;
-    } else {
-      cap.textContent = '最新の月次概況レポートを表示します';
-    }
+    try {
+      const meta = JSON.parse(localStorage.getItem('monthly_report_pdf_meta') || 'null');
+      if (meta && meta.name) {
+        const m = meta.name.match(/月次概況_(\d{4})(\d{2})\.pdf/);
+        if (m) {
+          const year  = parseInt(m[1], 10);
+          const month = parseInt(m[2], 10);
+          const fiscalYear = (month >= 11) ? year : year - 1;
+          const saved = new Date(meta.savedAt);
+          const fmtSaved = `${saved.getMonth()+1}/${saved.getDate()} ${String(saved.getHours()).padStart(2,'0')}:${String(saved.getMinutes()).padStart(2,'0')}更新`;
+          cap.textContent = `${fiscalYear}年度 ${month}月度版（11月〜${month}月）· ${fmtSaved}`;
+          return;
+        }
+      }
+    } catch(e) { /* 無視 */ }
+    cap.textContent = '最新の月次概況レポートを表示します';
   })();
 </script>
 </body>
