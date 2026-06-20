@@ -247,6 +247,14 @@
       </div>
       <div class="tool-arrow">›</div>
     </a>
+    <a class="tool-card" href="monthly_report_upload.html">
+      <div class="tool-icon" style="background:#EEE8F5;">📤</div>
+      <div class="tool-body">
+        <div class="tool-name">月次概況 アップロード</div>
+        <div class="tool-desc">生成したPDFをアップロードして閲覧ページに反映します</div>
+      </div>
+      <div class="tool-arrow">›</div>
+    </a>
   </div>
 
   <div class="section-label">書類ダウンロード — フロント業務</div>
@@ -396,25 +404,29 @@
     }
   })();
 
-  // 月次概況キャプション：monthly_report.html から読込済みメタ情報を取得
-  (function() {
+  // 月次概況キャプション：GitHubのメタJSONから取得
+  (async function() {
     const cap = document.getElementById('report-caption');
     try {
-      const meta = JSON.parse(localStorage.getItem('monthly_report_pdf_meta') || 'null');
-      if (meta && meta.name) {
-        const m = meta.name.match(/月次概況_(\d{4})(\d{2})\.pdf/);
-        if (m) {
-          const year  = parseInt(m[1], 10);
-          const month = parseInt(m[2], 10);
-          const fiscalYear = (month >= 11) ? year : year - 1;
-          const saved = new Date(meta.savedAt);
-          const fmtSaved = `${saved.getMonth()+1}/${saved.getDate()} ${String(saved.getHours()).padStart(2,'0')}:${String(saved.getMinutes()).padStart(2,'0')}更新`;
-          cap.textContent = `${fiscalYear}年度 ${month}月度版（11月〜${month}月）· ${fmtSaved}`;
-          return;
-        }
+      const res = await fetch(
+        'https://raw.githubusercontent.com/geroyado/geroyado-tools/main/data/report_meta.json?t=' + Date.now()
+      );
+      if (!res.ok) throw new Error();
+      const meta = await res.json();
+      const m = (meta.filename || '').match(/月次概況_(\d{4})(\d{2})\.pdf/);
+      if (m) {
+        const year  = parseInt(m[1], 10);
+        const month = parseInt(m[2], 10);
+        const fy    = (month >= 11) ? year : year - 1;
+        const saved = new Date(meta.updatedAt);
+        const fmtSaved = `${saved.getMonth()+1}/${saved.getDate()} ${String(saved.getHours()).padStart(2,'0')}:${String(saved.getMinutes()).padStart(2,'0')}更新`;
+        cap.textContent = `${fy}年度 ${month}月度版（11月〜${month}月）· ${fmtSaved}`;
+      } else {
+        cap.textContent = '最新の月次概況レポートを表示します';
       }
-    } catch(e) { /* 無視 */ }
-    cap.textContent = '最新の月次概況レポートを表示します';
+    } catch(e) {
+      cap.textContent = '最新の月次概況レポートを表示します';
+    }
   })();
 </script>
 </body>

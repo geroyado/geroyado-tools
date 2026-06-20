@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>月次概況 アップロード</title>
+<style>
+:root {
+  --bg: #0d0f14;
+  --surface: #161920;
+  --surface2: #1e2230;
+  --border: #272c3f;
+  --text: #dde1ed;
+  --dim: #6b7494;
+  --accent: #4f8ef7;
+  --green: #22c55e;
+  --red: #ef4444;
+  --purple: #818cf8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Hiragino Sans','Yu Gothic UI',sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; padding: 48px 20px 80px;
+}
+.header {
+  width: 100%; max-width: 560px;
+  display: flex; align-items: center; gap: 12px; margin-bottom: 40px;
+}
+.header-icon {
+  width: 38px; height: 38px; border-radius: 9px;
+  background: linear-gradient(135deg,#818cf8,#5B3278);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.header h1 { font-size: 16px; font-weight: 700; }
+.header .sub { font-size: 11px; color: var(--dim); margin-top: 2px; }
+.back { margin-left: auto; font-size: 12px; color: var(--dim);
+  text-decoration: none; padding: 5px 12px;
+  border: 1px solid var(--border); border-radius: 6px; transition: .2s; }
+.back:hover { color: var(--text); border-color: var(--accent); }
+
+.card {
+  width: 100%; max-width: 560px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 32px; margin-bottom: 16px;
+}
+.card-title {
+  font-size: 11px; font-weight: 700; letter-spacing: .06em;
+  color: var(--dim); margin-bottom: 14px; text-transform: uppercase;
+}
+.token-row { display: flex; gap: 8px; }
+.token-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px; color: var(--text);
+  font-size: 13px; font-family: monospace;
+}
+.token-input:focus { outline: none; border-color: var(--accent); }
+.token-save-btn {
+  padding: 9px 16px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: .2s; white-space: nowrap;
+}
+.token-save-btn:hover { border-color: var(--accent); color: var(--accent); }
+.token-status { font-size: 11px; margin-top: 8px; color: var(--dim); }
+.token-status.ok { color: var(--green); }
+.token-status.err { color: var(--red); }
+
+#drop-zone {
+  border: 2px dashed var(--border); border-radius: 12px;
+  padding: 48px 24px; text-align: center; cursor: pointer;
+  transition: .25s; margin-bottom: 24px;
+}
+#drop-zone.over { border-color: var(--purple); background: #131829; }
+#drop-zone .icon { font-size: 40px; margin-bottom: 14px; }
+#drop-zone .title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+#drop-zone .sub { font-size: 12px; color: var(--dim); }
+.pick-btn {
+  display: inline-block; margin-top: 16px; padding: 7px 20px;
+  background: var(--purple); color: #fff; border-radius: 8px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+#file-input { display: none; }
+
+#file-bar {
+  display: none; align-items: center; gap: 10px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; font-size: 13px;
+}
+#file-bar .fname { font-weight: 600; flex: 1; }
+#file-bar .fsize { color: var(--dim); font-size: 11px; }
+#file-bar .clr { background: none; border: none; color: var(--dim);
+  cursor: pointer; font-size: 15px; padding: 2px 6px; border-radius: 4px; transition: .2s; }
+#file-bar .clr:hover { color: var(--red); }
+
+#preview-wrap {
+  display: none; margin-bottom: 24px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px;
+}
+.preview-row { display: flex; gap: 8px; align-items: baseline; font-size: 13px; }
+.preview-key { color: var(--dim); font-size: 11px; width: 80px; flex-shrink: 0; }
+.preview-val { font-weight: 600; }
+
+#upload-btn {
+  width: 100%; padding: 13px;
+  background: linear-gradient(135deg,#818cf8,#5B3278);
+  color: #fff; border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: .2s; display: none;
+}
+#upload-btn:hover { opacity: 0.88; }
+#upload-btn:disabled { background: #2a3a5a; color: var(--dim); cursor: default; }
+
+#status {
+  display: none; margin-top: 16px; padding: 12px 16px;
+  border-radius: 10px; font-size: 13px; font-weight: 600; text-align: center;
+}
+#status.ok  { background: #0f2e1a; border: 1px solid #166534; color: var(--green); }
+#status.err { background: #2e0f0f; border: 1px solid #7f1d1d; color: var(--red); }
+
+#history-wrap { width: 100%; max-width: 560px; display: none; }
+#history-wrap h2 {
+  font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  color: var(--dim); margin-bottom: 12px; text-transform: uppercase;
+}
+.hist-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; font-size: 12px;
+}
+.hist-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--purple); flex-shrink: 0; }
+.hist-label { font-weight: 600; flex: 1; }
+.hist-meta { color: var(--dim); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">📋</div>
+  <div>
+    <h1>月次概況 アップロード</h1>
+    <div class="sub">生成したPDFをGitHubに保存・公開する</div>
+  </div>
+  <a class="back" href="index.html">← ポータル</a>
+</div>
+
+<div class="card">
+  <div class="card-title">GitHub トークン設定</div>
+  <div class="token-row">
+    <input type="password" class="token-input" id="token-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+    <button class="token-save-btn" id="token-save-btn">保存</button>
+  </div>
+  <div class="token-status" id="token-status">トークンを入力して保存してください（初回のみ）</div>
+</div>
+
+<div class="card">
+  <div id="drop-zone">
+    <div class="icon">📄</div>
+    <div class="title">月次概況PDFをここにドロップ</div>
+    <div class="sub">月次概況_YYYYMM.pdf をドラッグ＆ドロップ</div>
+    <label class="pick-btn" for="file-input">ファイルを選択</label>
+    <input type="file" id="file-input" accept="application/pdf">
+  </div>
+
+  <div id="file-bar">
+    <span>📄</span>
+    <span class="fname" id="fname"></span>
+    <span class="fsize" id="fsize"></span>
+    <button class="clr" id="clr-btn">✕</button>
+  </div>
+
+  <div id="preview-wrap">
+    <div class="preview-row" style="margin-bottom:8px">
+      <span class="preview-key">ファイル名</span>
+      <span class="preview-val" id="pv-name">—</span>
+    </div>
+    <div class="preview-row" style="margin-bottom:8px">
+      <span class="preview-key">対象年月</span>
+      <span class="preview-val" id="pv-period">—</span>
+    </div>
+    <div class="preview-row">
+      <span class="preview-key">サイズ</span>
+      <span class="preview-val" id="pv-size">—</span>
+    </div>
+  </div>
+
+  <button id="upload-btn">🚀 GitHubに保存・公開する</button>
+  <div id="status"></div>
+</div>
+
+<div id="history-wrap">
+  <h2>アップロード履歴</h2>
+  <div id="history-list"></div>
+</div>
+
+<script>
+const REPO      = 'geroyado/geroyado-tools';
+const BRANCH    = 'main';
+const TOKEN_KEY = 'gh_token_occ';   // occ_upload.html と共用
+const HIST_KEY  = 'report_history_local';
+
+let pendingFile   = null;
+let pendingBase64 = null;
+
+// ── トークン ──
+function loadToken() {
+  const t = localStorage.getItem(TOKEN_KEY);
+  if (t) {
+    document.getElementById('token-input').value = t;
+    setTokenStatus('ok', '✅ トークン設定済み（ブラウザに保存）');
+  }
+}
+document.getElementById('token-save-btn').addEventListener('click', () => {
+  const t = document.getElementById('token-input').value.trim();
+  if (!t.startsWith('ghp_') && !t.startsWith('github_pat_')) {
+    setTokenStatus('err', '⚠ 形式が正しくありません（ghp_ で始まる文字列）');
+    return;
+  }
+  localStorage.setItem(TOKEN_KEY, t);
+  setTokenStatus('ok', '✅ 保存しました');
+});
+function setTokenStatus(cls, msg) {
+  const el = document.getElementById('token-status');
+  el.className = 'token-status ' + cls;
+  el.textContent = msg;
+}
+function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+
+// ── ファイル名から年月キャプション ──
+function captionFromName(name) {
+  const m = name.match(/月次概況_(\d{4})(\d{2})\.pdf/i);
+  if (!m) return null;
+  const year  = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10);
+  const fiscalYear = (month >= 11) ? year : year - 1;
+  return { year, month, fiscalYear, label: `${fiscalYear}年度 ${month}月度版（11月〜${month}月）` };
+}
+
+// ── D&D ──
+const zone = document.getElementById('drop-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('over');
+  if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+});
+document.getElementById('file-input').addEventListener('change', e => {
+  if (e.target.files[0]) processFile(e.target.files[0]);
+});
+document.getElementById('clr-btn').addEventListener('click', reset);
+document.getElementById('upload-btn').addEventListener('click', saveToGitHub);
+
+// ── ファイル処理 ──
+function processFile(file) {
+  if (file.type !== 'application/pdf') {
+    showStatus('err', '⚠ PDFファイルを選択してください');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    // ArrayBuffer → Base64
+    const bytes = new Uint8Array(e.target.result);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    pendingBase64 = btoa(binary);
+    pendingFile   = file;
+
+    showFileBar(file);
+    showPreview(file);
+    document.getElementById('upload-btn').style.display = 'block';
+    hideStatus();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── GitHub保存 ──
+async function saveToGitHub() {
+  const token = getToken();
+  if (!token) { showStatus('err', '⚠ 先にトークンを設定してください'); return; }
+  if (!pendingFile || !pendingBase64) return;
+
+  const ghPath = 'docs/report/monthly_report_latest.pdf';
+
+  const btn = document.getElementById('upload-btn');
+  btn.disabled = true; btn.textContent = 'GitHubに保存中…';
+
+  try {
+    const apiUrl = `https://api.github.com/repos/${REPO}/contents/${encodeURIComponent(ghPath)}`;
+    const headers = {
+      'Authorization': `token ${token}`,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    };
+
+    // 既存SHAを取得（上書き用）
+    let sha = null;
+    try {
+      const r = await fetch(apiUrl, { headers });
+      if (r.ok) sha = (await r.json()).sha;
+    } catch {}
+
+    const body = {
+      message: `月次概況更新 ${pendingFile.name}`,
+      content: pendingBase64,
+      branch: BRANCH
+    };
+    if (sha) body.sha = sha;
+
+    const res = await fetch(apiUrl, { method: 'PUT', headers, body: JSON.stringify(body) });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message || `HTTP ${res.status}`); }
+
+    // メタJSON更新（閲覧側のキャプション表示用）
+    const metaPath = 'data/report_meta.json';
+    const metaApiUrl = `https://api.github.com/repos/${REPO}/contents/${metaPath}`;
+    let metaSha = null;
+    try { const r = await fetch(metaApiUrl, { headers }); if (r.ok) metaSha = (await r.json()).sha; } catch {}
+    const metaContent = JSON.stringify({
+      filename: pendingFile.name,
+      updatedAt: new Date().toISOString()
+    });
+    const metaBody = {
+      message: `月次概況メタ更新 ${pendingFile.name}`,
+      content: btoa(unescape(encodeURIComponent(metaContent))),
+      branch: BRANCH
+    };
+    if (metaSha) metaBody.sha = metaSha;
+    await fetch(metaApiUrl, { method: 'PUT', headers, body: JSON.stringify(metaBody) });
+
+    // 履歴保存
+    const hist = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+    hist.unshift({ filename: pendingFile.name, savedAt: new Date().toISOString(), size: pendingFile.size });
+    localStorage.setItem(HIST_KEY, JSON.stringify(hist.slice(0, 5)));
+
+    showStatus('ok', '✅ 保存しました。閲覧ページに反映されます（数秒かかる場合があります）');
+    loadHistory();
+  } catch(err) {
+    showStatus('err', '⚠ 保存に失敗しました: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '🚀 GitHubに保存・公開する';
+  }
+}
+
+// ── UI ──
+function showFileBar(file) {
+  document.getElementById('drop-zone').style.display = 'none';
+  document.getElementById('fname').textContent = file.name;
+  document.getElementById('fsize').textContent = (file.size / 1024).toFixed(0) + ' KB';
+  document.getElementById('file-bar').style.display = 'flex';
+}
+
+function showPreview(file) {
+  const pv = document.getElementById('preview-wrap');
+  pv.style.display = 'block';
+  const info = captionFromName(file.name);
+  document.getElementById('pv-name').textContent = file.name;
+  document.getElementById('pv-period').textContent = info ? info.label : '（ファイル名から年月を読み取れませんでした）';
+  document.getElementById('pv-size').textContent = (file.size / 1024).toFixed(0) + ' KB';
+}
+
+function loadHistory() {
+  const hist = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+  const wrap = document.getElementById('history-wrap');
+  if (!hist.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  document.getElementById('history-list').innerHTML = hist.map(h => {
+    const d = new Date(h.savedAt);
+    const info = captionFromName(h.filename);
+    const label = info ? info.label : h.filename;
+    return `<div class="hist-item">
+      <div class="hist-dot"></div>
+      <div class="hist-label">${label}</div>
+      <div class="hist-meta">${(h.size/1024).toFixed(0)}KB — ${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</div>
+    </div>`;
+  }).join('');
+}
+
+function reset() {
+  pendingFile = null; pendingBase64 = null;
+  document.getElementById('drop-zone').style.display = 'block';
+  document.getElementById('file-bar').style.display  = 'none';
+  document.getElementById('preview-wrap').style.display = 'none';
+  document.getElementById('upload-btn').style.display   = 'none';
+  document.getElementById('file-input').value = '';
+  hideStatus();
+}
+function showStatus(t, m) {
+  const e = document.getElementById('status');
+  e.className = 'status ' + t; e.textContent = m; e.style.display = 'block';
+}
+function hideStatus() { document.getElementById('status').style.display = 'none'; }
+
+loadToken(); loadHistory();
+</script>
+</body>
+</html>
