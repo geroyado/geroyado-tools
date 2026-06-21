@@ -51,8 +51,9 @@ html, body { width: 100%; height: 100%; background: #f5f5f5; font-family: 'Hirag
   font-size: 12px; font-weight: 700;
   padding: 2px 0; border-radius: 4px;
 }
-.shuttle-status.running { background: #00C040; color: #fff; }
-.shuttle-status.closed  { background: #AAA;    color: #fff; }
+.shuttle-status.running  { background: #00C040; color: #fff; }
+.shuttle-status.closed   { background: #AAA;    color: #fff; }
+.shuttle-status.finished { background: #2979FF; color: #fff; }
 .shuttle-row {
   display: flex; align-items: center; gap: 4px;
   padding: 2px 0;
@@ -233,6 +234,7 @@ let memoTimers={};
 // シャトルバス状態
 const shuttleState={
   running: false,
+  finished: false,
   times:[
     {label:'9:45',  has:false, confirmed:false},
     {label:'10:10', has:false, confirmed:false}
@@ -263,7 +265,8 @@ onValue(roomsRef, snap=>{
 
 onValue(ref(db,'shuttle'), snap=>{
   const data=snap.val()||{};
-  shuttleState.running = data.running||false;
+  shuttleState.running  = data.running ||false;
+  shuttleState.finished = data.finished||false;
   if(data.times){
     shuttleState.times.forEach((t,i)=>{
       if(data.times[i]){
@@ -281,7 +284,8 @@ onValue(ref(db,'shuttle'), snap=>{
 
 function writeShuttle(){
   update(ref(db,'shuttle'),{
-    running: shuttleState.running,
+    running:  shuttleState.running,
+    finished: shuttleState.finished,
     times: shuttleState.times.map(t=>({has:t.has,confirmed:t.confirmed})),
     extra: {requested:shuttleState.extra.requested, confirmed:shuttleState.extra.confirmed}
   });
@@ -290,8 +294,12 @@ function renderShuttle(){
   const box=document.getElementById('shuttle-box');
   if(!box)return;
   const st=document.getElementById('shuttle-status');
-  st.textContent=shuttleState.running?'運行':'運休';
-  st.className='shuttle-status '+(shuttleState.running?'running':'closed');
+  if(shuttleState.finished){
+    st.textContent='本日終了'; st.className='shuttle-status finished';
+  } else {
+    st.textContent=shuttleState.running?'運行':'運休';
+    st.className='shuttle-status '+(shuttleState.running?'running':'closed');
+  }
   shuttleState.times.forEach((t,i)=>{
     const row=document.getElementById('shuttle-row-'+i);
     const hasBtn=document.getElementById('shuttle-has-'+i);
@@ -325,7 +333,14 @@ function makeShuttleBox(){
   const title=document.createElement('div');title.className='shuttle-title';title.textContent='シャトルバス';
   const status=document.createElement('div');status.className='shuttle-status closed';status.id='shuttle-status';status.textContent='運休';
   status.addEventListener('click',()=>{
-    shuttleState.running=!shuttleState.running;
+    // 運休 → 運行 → 本日終了 → 運休 のサイクル
+    if(!shuttleState.running && !shuttleState.finished){
+      shuttleState.running=true; shuttleState.finished=false;
+    } else if(shuttleState.running && !shuttleState.finished){
+      shuttleState.running=false; shuttleState.finished=true;
+    } else {
+      shuttleState.running=false; shuttleState.finished=false;
+    }
     renderShuttle(); writeShuttle();
   });
   box.appendChild(title);box.appendChild(status);
@@ -386,6 +401,7 @@ function writeMemoLeft(i,val){ update(ref(db,'memo_left'),{['left_'+i]:val}); }
 function writeMemoRight(i,val){ update(ref(db,'memo_right'),{['right_'+i]:val}); }
 function resetShuttle(){
   shuttleState.running=false;
+  shuttleState.finished=false;
   shuttleState.times.forEach(t=>{t.has=false;t.confirmed=false;});
   shuttleState.extra.requested=false;
   shuttleState.extra.confirmed=false;
