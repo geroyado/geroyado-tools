@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>お品書き入力 — 下呂観光ホテル</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Yu Gothic", "游ゴシック", sans-serif;
+    background: #f5f2ee; color: #222; font-size: 14px;
+  }
+
+  /* ヘッダー */
+  .header {
+    background: #3a2e24; color: #e8ddd0;
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .header h1 { font-size: 16px; font-weight: bold; letter-spacing: 0.05em; }
+  .header .date { font-size: 13px; color: #b0a090; margin-left: auto; }
+  .status-badge {
+    padding: 3px 12px; border-radius: 3px; font-size: 12px; font-weight: bold;
+  }
+  .badge-draft     { background: #7a5c00; color: #fff; }
+  .badge-confirmed { background: #2d6a2d; color: #fff; }
+
+  /* メインレイアウト */
+  .container { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+
+  /* アクションバー */
+  .action-bar {
+    background: #fff; border-radius: 8px; padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+  .btn {
+    padding: 8px 18px; border-radius: 5px; border: none;
+    cursor: pointer; font-size: 13px; font-weight: bold;
+    transition: background 0.15s;
+  }
+  .btn-copy   { background: #5c7a5c; color: #fff; }
+  .btn-copy:hover { background: #3e5c3e; }
+  .btn-save   { background: #8b7355; color: #fff; }
+  .btn-save:hover { background: #6e5a3e; }
+  .btn-confirm { background: #2d6a2d; color: #fff; font-size: 14px; padding: 10px 24px; margin-left: auto; }
+  .btn-confirm:hover { background: #1e4a1e; }
+  .btn-confirm:disabled { background: #999; cursor: not-allowed; }
+
+
+  /* グループタブ（通常／連泊） */
+  .group-tabs {
+    display: flex; gap: 4px; margin-bottom: 0;
+  }
+  .group-tab {
+    padding: 8px 28px; border-radius: 6px 6px 0 0;
+    background: #7a6a58; color: #e8ddd0; cursor: pointer;
+    font-size: 14px; font-weight: bold; border: none;
+    transition: background 0.15s; letter-spacing: 0.05em;
+  }
+  .group-tab.active { background: #2c1e14; color: #f0e6d8; }
+  .group-tab:hover:not(.active) { background: #5c4e3e; }
+
+  /* コースタブ：グループタブに続く */
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 16px;
+    border-top: 3px solid #2c1e14; padding-top: 4px;
+  }
+  /* コースタブ */
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 16px;
+  }
+  .tab {
+    padding: 8px 20px; border-radius: 6px 6px 0 0;
+    background: #d4c9b8; color: #555; cursor: pointer;
+    font-size: 13px; font-weight: bold; border: none;
+    transition: background 0.15s;
+  }
+  .tab.active { background: #3a2e24; color: #e8ddd0; }
+  .tab:hover:not(.active) { background: #c0b09e; }
+
+  /* 料理区分カード */
+  .genre-card {
+    background: #fff; border-radius: 0 8px 8px 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    margin-bottom: 12px; overflow: hidden;
+  }
+  .genre-header {
+    background: #3a2e24; color: #e8ddd0;
+    padding: 8px 16px;
+    display: flex; align-items: center; gap: 12px;
+    font-weight: bold; font-size: 14px;
+  }
+  .genre-header .genre-name { letter-spacing: 0.1em; }
+  .genre-header .copy-btns  { margin-left: auto; display: flex; gap: 6px; }
+  .btn-copy-small {
+    padding: 3px 10px; border-radius: 3px; border: none;
+    background: #5c5040; color: #e8ddd0; font-size: 11px;
+    cursor: pointer;
+  }
+  .btn-copy-small:hover { background: #3e3428; }
+
+  .genre-body { padding: 12px 16px; }
+
+  /* 通常の入力フィールド */
+  .field-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .field-label {
+    width: 60px; font-size: 12px; color: #888; flex-shrink: 0;
+  }
+  .field-input {
+    flex: 1; padding: 6px 10px; border: 1px solid #ccc;
+    border-radius: 4px; font-size: 14px; font-family: inherit;
+    background: #fafafa;
+  }
+  .field-input:focus {
+    outline: none; border-color: #8b7355;
+    background: #fff; box-shadow: 0 0 0 2px rgba(139,115,85,0.15);
+  }
+
+  /* 楽盛りアイテムリスト */
+  .raku-list { display: flex; flex-direction: column; gap: 6px; }
+  .raku-item-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .raku-num {
+    width: 24px; height: 24px; background: #e8e0d4;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #666; flex-shrink: 0;
+  }
+  .raku-input {
+    flex: 1; padding: 6px 10px; border: 1px solid #ccc;
+    border-radius: 4px; font-size: 14px; font-family: inherit;
+    background: #fafafa;
+  }
+  .raku-input:focus {
+    outline: none; border-color: #8b7355; background: #fff;
+    box-shadow: 0 0 0 2px rgba(139,115,85,0.15);
+  }
+
+  /* 飛騨牛ブロック */
+  .genre-card.hida .genre-header { background: #6b3a1a; }
+
+  /* トースト通知 */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #333; color: #fff; padding: 10px 24px;
+    border-radius: 6px; font-size: 13px; opacity: 0;
+    transition: opacity 0.3s; pointer-events: none; z-index: 999;
+  }
+  .toast.show { opacity: 1; }
+
+  /* 確認ダイアログ */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: center; justify-content: center; z-index: 100;
+  }
+  .overlay.show { display: flex; }
+  .dialog {
+    background: #fff; border-radius: 10px; padding: 28px 32px;
+    max-width: 360px; width: 90%; text-align: center;
+  }
+  .dialog h3 { font-size: 16px; margin-bottom: 12px; }
+  .dialog p  { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.6; }
+  .dialog-btns { display: flex; gap: 12px; justify-content: center; }
+  .btn-cancel  { padding: 8px 24px; border-radius: 5px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+  .btn-ok      { padding: 8px 24px; border-radius: 5px; border: none; background: #2d6a2d; color: #fff; cursor: pointer; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📋 お品書き入力</h1>
+  <span id="headerDate"></span>
+  <span id="statusBadge" class="status-badge badge-draft">未確定</span>
+</div>
+
+<div class="container">
+
+  <!-- アクションバー -->
+  <div class="action-bar">
+    <button class="btn btn-copy" onclick="confirmCopyAll()">📋 全項目を下位コースにコピー</button>
+    <button class="btn btn-save" onclick="saveData()">💾 一時保存</button>
+    <button class="btn btn-confirm" id="btnConfirm" onclick="confirmAll()">✅ 全ての献立を確定する</button>
+  </div>
+
+  <!-- グループタブ（通常／連泊） -->
+  <div class="group-tabs">
+    <button class="group-tab active" id="grp-normal" onclick="switchGroup('normal', this)">通常</button>
+    <button class="group-tab" id="grp-renp" onclick="switchGroup('renp', this)">連泊（2日目）</button>
+  </div>
+
+  <!-- コースタブ -->
+  <div class="tabs" id="courseTabs">
+    <button class="tab active" id="tab-yuki" onclick="switchTab('yuki', this)">雪コース</button>
+    <button class="tab" id="tab-tsuki" onclick="switchTab('tsuki', this)">月コース</button>
+    <button class="tab" id="tab-hana" onclick="switchTab('hana', this)">花コース</button>
+    <button class="tab" id="tab-hida" onclick="switchTab('hida', this)">飛騨牛コース</button>
+  </div>
+
+  <!-- 入力フォーム -->
+  <div id="formArea"></div>
+
+</div>
+
+<!-- トースト -->
+<div class="toast" id="toast"></div>
+
+<!-- 確認ダイアログ -->
+<div class="overlay" id="overlay">
+  <div class="dialog">
+    <h3 id="dialogTitle"></h3>
+    <p id="dialogMsg"></p>
+    <div class="dialog-btns">
+      <button class="btn-cancel" onclick="closeDialog()">キャンセル</button>
+      <button class="btn-ok" id="dialogOk">はい</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBk4saCx38rdIL6ih0wDaQWjoxlGwjSpS8",
+  authDomain: "geroyado-oshinagaki.firebaseapp.com",
+  databaseURL: "https://geroyado-oshinagaki-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "geroyado-oshinagaki",
+  storageBucket: "geroyado-oshinagaki.firebasestorage.app",
+  messagingSenderId: "389593436209",
+  appId: "1:389593436209:web:40b819f3e0b9821aed0510"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+// 今日の日付
+const today = new Date();
+const dateKey = today.getFullYear() + '-'
+  + String(today.getMonth()+1).padStart(2,'0') + '-'
+  + String(today.getDate()).padStart(2,'0');
+
+// 旧暦月名
+const kanjiMonths = ['睦月','如月','弥生','卯月','皐月','水無月','文月','葉月','長月','神無月','霜月','師走'];
+const kanjiMonthNums = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
+const kanjiDays = ['','一','二','三','四','五','六','七','八','九','十',
+  '十一','十二','十三','十四','十五','十六','十七','十八','十九','二十',
+  '二十一','二十二','二十三','二十四','二十五','二十六','二十七','二十八','二十九','三十','三十一'];
+
+document.getElementById('headerDate').textContent =
+  kanjiMonthNums[today.getMonth()] + '月' + kanjiDays[today.getDate()] + '日（' + dateKey + '）';
+
+// 料理区分定義
+const GENRES = [
+  { key: 'sakizuke',   name: '先附',   isRaku: false },
+  { key: 'wankawari',  name: '椀替り',  isRaku: false },
+  { key: 'tsukuri',    name: '造里',   isRaku: false },
+  { key: 'rakumori',   name: '楽盛り',  isRaku: true,  rakulen: 9 },
+  { key: 'yakimono',   name: '焼物',   isRaku: false },
+  { key: 'futamono',   name: '蓋物',   isRaku: false },
+  { key: 'shizakana',  name: '強肴',   isRaku: false },
+  { key: 'shokuji',    name: '食事',   isRaku: false },
+  { key: 'konomono',   name: '香物',   isRaku: false },
+  { key: 'tomewan',    name: '止椀',   isRaku: false },
+  { key: 'kuchidori',  name: '口直し',  isRaku: false },
+];
+
+const HIDA_GENRES = [
+  { key: 'hida',       name: '飛騨牛区間', isRaku: false, isHida: true },
+];
+
+const COURSES = ['yuki','tsuki','hana','hida','yuki_2','tsuki_2','hana_2','hida_2'];
+const COURSE_NAMES = { yuki:'雪', tsuki:'月', hana:'花', hida:'飛騨牛', yuki_2:'雪(連泊)', tsuki_2:'月(連泊)', hana_2:'花(連泊)', hida_2:'飛騨牛(連泊)' };
+
+// メモリ上のデータ
+let memData = { status: 'draft', courses: {} };
+COURSES.forEach(c => { memData.courses[c] = {}; });
+
+let currentCourse = 'yuki';
+let isConfirmed = false;
+
+// Firebaseから読み込み
+const dataRef = ref(db, `daily/${dateKey}`);
+onValue(dataRef, (snap) => {
+  const val = snap.val();
+  if (val) {
+    memData = val;
+    if (!memData.courses) memData.courses = {};
+    COURSES.forEach(c => { if (!memData.courses[c]) memData.courses[c] = {}; });
+    isConfirmed = val.status === 'confirmed';
+    updateStatusBadge();
+  }
+  renderForm(currentCourse);
+}, { onlyOnce: true });
+
+function updateStatusBadge() {
+  const badge = document.getElementById('statusBadge');
+  const btn   = document.getElementById('btnConfirm');
+  if (isConfirmed) {
+    const confirmedAt = memData.confirmed_at
+      ? new Date(memData.confirmed_at).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})
+      : '';
+    badge.textContent = '確定済み' + (confirmedAt ? '　' + confirmedAt + '確定' : '');
+    badge.className = 'status-badge badge-confirmed';
+    btn.textContent = '✅ 確定済み';
+    btn.disabled = true;
+  } else {
+    badge.textContent = '未確定';
+    badge.className = 'status-badge badge-draft';
+    btn.textContent = '✅ 全ての献立を確定する';
+    btn.disabled = false;
+  }
+}
+
+// フォーム描画
+function renderForm(course) {
+  const area = document.getElementById('formArea');
+  area.innerHTML = '';
+  const courseData = memData.courses[course] || {};
+  const genres = course === 'hida'
+    ? [...GENRES, ...HIDA_GENRES]
+    : GENRES;
+
+  genres.forEach(genre => {
+    const card = document.createElement('div');
+    card.className = 'genre-card' + (genre.isHida ? ' hida' : '');
+
+    const gd = courseData[genre.key] || {};
+
+    // ヘッダー
+    const header = document.createElement('div');
+    header.className = 'genre-header';
+    header.innerHTML = `<span class="genre-name">${genre.name}</span>`;
+
+    // コピーボタン（雪コースのみ）
+    if (course === 'yuki' || course === 'yuki_2') {
+      const copyBtns = document.createElement('div');
+      copyBtns.className = 'copy-btns';
+      const isRenp = course === 'yuki_2';
+      const targets = isRenp ? ['tsuki_2','hana_2','hida_2'] : ['tsuki','hana','hida'];
+      targets.forEach(to => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-copy-small';
+        btn.textContent = COURSE_NAMES[to] + 'へコピー';
+        btn.onclick = () => copyGenre(genre.key, course, to);
+        copyBtns.appendChild(btn);
+      });
+      header.appendChild(copyBtns);
+    }
+    card.appendChild(header);
+
+    // ボディ
+    const body = document.createElement('div');
+    body.className = 'genre-body';
+
+    if (genre.isRaku) {
+      // 楽盛り
+      const items = gd.items || Array(genre.rakulen).fill('');
+      const list = document.createElement('div');
+      list.className = 'raku-list';
+      for (let i = 0; i < genre.rakulen; i++) {
+        const row = document.createElement('div');
+        row.className = 'raku-item-row';
+        row.innerHTML = `<div class="raku-num">${i+1}</div>`;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'raku-input';
+        input.value = items[i] || '';
+        input.dataset.genre = genre.key;
+        input.dataset.idx   = i;
+        input.addEventListener('input', onRakuInput);
+        row.appendChild(input);
+        list.appendChild(row);
+      }
+      body.appendChild(list);
+    } else {
+      // 通常
+      [['dish','料理名'],['detail1','補足1'],['detail2','補足2'],['detail3','補足3']].forEach(([key, label]) => {
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        row.innerHTML = `<span class="field-label">${label}</span>`;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'field-input';
+        input.value = gd[key] || '';
+        input.dataset.genre = genre.key;
+        input.dataset.field = key;
+        input.addEventListener('input', onFieldInput);
+        row.appendChild(input);
+        body.appendChild(row);
+      });
+    }
+
+    card.appendChild(body);
+    area.appendChild(card);
+  });
+}
+
+// 入力イベント
+function onFieldInput(e) {
+  const { genre, field } = e.target.dataset;
+  if (!memData.courses[currentCourse][genre]) memData.courses[currentCourse][genre] = {};
+  memData.courses[currentCourse][genre][field] = e.target.value;
+}
+
+function onRakuInput(e) {
+  const { genre, idx } = e.target.dataset;
+  if (!memData.courses[currentCourse][genre]) memData.courses[currentCourse][genre] = { items: [] };
+  if (!memData.courses[currentCourse][genre].items) memData.courses[currentCourse][genre].items = [];
+  memData.courses[currentCourse][genre].items[parseInt(idx)] = e.target.value;
+}
+
+// グループ・タブ切り替え
+let currentGroup = 'normal';
+const GROUP_COURSES = {
+  normal: ['yuki','tsuki','hana','hida'],
+  renp:   ['yuki_2','tsuki_2','hana_2','hida_2'],
+};
+const TAB_IDS = ['tab-yuki','tab-tsuki','tab-hana','tab-hida'];
+const BASE_KEYS = ['yuki','tsuki','hana','hida'];
+
+window.switchGroup = function(group, el) {
+  currentGroup = group;
+  document.querySelectorAll('.group-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  // コースタブのラベルを切り替え
+  const suffix = group === 'renp' ? '【連泊】' : '';
+  const names  = ['雪','月','花','飛騨牛'];
+  TAB_IDS.forEach((id, i) => {
+    const tab = document.getElementById(id);
+    if (tab) tab.textContent = names[i] + 'コース' + suffix;
+  });
+  // アクティブタブのコースキーを更新
+  const prefix = group === 'renp' ? '_2' : '';
+  const activeBase = BASE_KEYS[TAB_IDS.findIndex(id => document.getElementById(id)?.classList.contains('active'))] || 'yuki';
+  currentCourse = activeBase + prefix;
+  renderForm(currentCourse);
+};
+
+window.switchTab = function(baseKey, el) {
+  const prefix = currentGroup === 'renp' ? '_2' : '';
+  currentCourse = baseKey + prefix;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderForm(currentCourse);
+};
+
+// 一時保存
+window.saveData = async function() {
+  memData.status = isConfirmed ? 'confirmed' : 'draft';
+  await set(ref(db, `daily/${dateKey}`), memData);
+  showToast('💾 保存しました');
+};
+
+// 確定
+window.confirmAll = function() {
+  showDialog(
+    '献立を確定しますか？',
+    '確定するとフロントが印刷可能になります。\nあとから変更する場合は再度確定が必要です。',
+    async () => {
+      memData.status = 'confirmed';
+      memData.confirmed_at = new Date().toISOString();
+      await set(ref(db, `daily/${dateKey}`), memData);
+      isConfirmed = true;
+      updateStatusBadge();
+      showToast('✅ 献立を確定しました');
+    }
+  );
+};
+
+// 全コースにコピー
+window.confirmCopyAll = function() {
+  if (currentGroup === 'renp') {
+    showDialog(
+      '全項目を下位コースにコピー',
+      '雪コース【連泊】の全内容を月・花・飛騨牛【連泊】にコピーします。\n各コースの入力内容は上書きされます。',
+      () => {
+        ['tsuki_2','hana_2','hida_2'].forEach(to => {
+          memData.courses[to] = JSON.parse(JSON.stringify(memData.courses['yuki_2']));
+        });
+        showToast('📋 コピーしました');
+        renderForm(currentCourse);
+      }
+    );
+  } else {
+    showDialog(
+      '全項目を下位コースにコピー',
+      '雪コースの全内容を月・花・飛騨牛コースにコピーします。\n各コースの入力内容は上書きされます。',
+      () => {
+        ['tsuki','hana','hida'].forEach(to => {
+          memData.courses[to] = JSON.parse(JSON.stringify(memData.courses['yuki']));
+        });
+        showToast('📋 コピーしました');
+        renderForm(currentCourse);
+      }
+    );
+  }
+};
+
+// 単一区分コピー
+window.copyGenre = function(genreKey, from, to) {
+  if (!memData.courses[from][genreKey]) return;
+  if (!memData.courses[to]) memData.courses[to] = {};
+  memData.courses[to][genreKey] = JSON.parse(JSON.stringify(memData.courses[from][genreKey]));
+  showToast(`📋 ${COURSE_NAMES[to]}コースにコピーしました`);
+};
+
+// ダイアログ
+function showDialog(title, msg, onOk) {
+  document.getElementById('dialogTitle').textContent = title;
+  document.getElementById('dialogMsg').textContent = msg;
+  document.getElementById('dialogOk').onclick = () => { closeDialog(); onOk(); };
+  document.getElementById('overlay').classList.add('show');
+}
+window.closeDialog = function() {
+  document.getElementById('overlay').classList.remove('show');
+};
+
+// トースト
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+</script>
+</body>
+</html>

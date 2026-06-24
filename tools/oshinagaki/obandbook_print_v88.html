@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>お品書き印刷プレビュー</title>
+<style>
+  @page { size: 297mm 105mm; margin: 0; }
+  @media print {
+    html, body { margin: 0; padding: 0; background: white; }
+    .no-print { display: none !important; }
+    .page { margin: 0 !important; box-shadow: none !important; }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", "游明朝", "MS Mincho", serif;
+    background: #f0ede8; color: #000;
+  }
+  .no-print {
+    padding: 10px 20px; background: #2c2c2c; color: #eee;
+    display: flex; align-items: center; gap: 16px;
+    font-family: sans-serif; font-size: 13px;
+  }
+  .no-print label { color: #aaa; }
+  .no-print select {
+    background: #444; color: #eee; border: 1px solid #666;
+    border-radius: 4px; padding: 4px 8px; font-size: 13px;
+  }
+  .btn-print {
+    margin-left: auto; background: #8b7355; color: white;
+    border: none; border-radius: 4px; padding: 7px 18px;
+    cursor: pointer; font-size: 13px; font-family: sans-serif;
+  }
+  .status-badge { padding: 3px 10px; border-radius: 3px; font-size: 12px; font-family: sans-serif; }
+  .status-confirmed { background: #2d6a2d; color: #fff; }
+  .status-draft     { background: #7a5c00; color: #fff; }
+  .status-loading   { background: #444; color: #aaa; }
+
+  .page {
+    width: 297mm; height: 105mm; background: white;
+    overflow: hidden; margin: 20px auto;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  }
+
+  .outer-table {
+    width: 297mm; height: 105mm;
+    border-collapse: collapse; table-layout: fixed;
+  }
+  .row-oshinagaki { height: 105mm; vertical-align: top; }
+
+  .col-margin-l  { width: 20mm; }
+  .col-margin-r  { width: 15mm; }
+  .col-footer-b  { width: 17mm; }
+  .col-footer-a  { width: 22mm; }
+  .col-spacer    { width: 0mm; }
+  .col-title     { width: 22mm; }
+
+  .col-lpad      { width: 1.5mm; }
+  .col-lpad-wide { width: 3mm; }
+  .col-rpad      { width: 1.5mm; }
+  .col-dish-a    { width: 6mm; }
+  .col-dish-b    { width: 8mm; }
+  .col-det       { width: 5mm; }
+  .col-raku-item { width: 5.5mm; }
+
+  .inner-table {
+    width: 297mm; height: 105mm;
+    border-collapse: collapse; table-layout: fixed;
+  }
+  .inner-table td { padding: 0; border: none; overflow: hidden; }
+  .row-label         { height: 24mm; }
+  .row-content-inner { height: 81mm; }
+
+  /* ラベルセル */
+  .label-cell { height: 24mm; position: relative; overflow: hidden; }
+  .label-inner {
+    position: absolute; bottom: 2mm; left: 0; right: 0;
+    display: flex; justify-content: center; align-items: center;
+  }
+  .label-text {
+    writing-mode: vertical-rl; text-orientation: mixed;
+    font-size: 11pt; font-weight: bold;
+    letter-spacing: 0.1em; text-align: center; white-space: nowrap;
+  }
+
+
+
+  /* 内容セル */
+  .content-cell { vertical-align: top; overflow: hidden; }
+  .content-inner {
+    width: 100%; height: 81mm;
+    display: flex; flex-direction: column;
+    align-items: center; overflow: hidden;
+    padding-top: 3mm;
+  }
+  .content-inner > * {
+    writing-mode: vertical-rl; text-orientation: mixed; flex-shrink: 0;
+  }
+  .dish {
+    font-size: 12pt; font-weight: bold;
+    letter-spacing: 0.1em; text-align: center;
+  }
+  .dish + .dish { margin-top: 2mm; }
+  .det {
+    font-size: 10pt; color: #222;
+    letter-spacing: 0.08em; text-align: center;
+  }
+
+  /* タイトル */
+  .title-cell { vertical-align: top; overflow: hidden; }
+  .title-inner {
+    width: 100%; height: 105mm;
+    display: flex; flex-direction: column;
+    align-items: center; overflow: hidden; padding-top: 12mm;
+  }
+  .title-inner > * { writing-mode: vertical-rl; text-orientation: mixed; flex-shrink: 0; }
+  .title-main   { font-size: 16pt; font-weight: bold; letter-spacing: 0.2em; }
+  .title-course { font-size: 12pt; letter-spacing: 0.15em; margin-top: 6mm; color: #333; }
+
+  /* フッターB：日付・館名（縦書き・下揃え） */
+  .footer-b-cell {
+    vertical-align: bottom; overflow: hidden; padding-bottom: 14mm;
+  }
+  .footer-b-cell span {
+    writing-mode: vertical-rl; text-orientation: mixed;
+    display: block; text-align: center;
+  }
+  .footer-date  { font-size: 11pt; font-weight: bold; letter-spacing: 0.08em; }
+  .footer-hotel { font-size: 11pt; font-weight: bold; letter-spacing: 0.08em; margin-top: 3mm; margin-bottom: 12pt; }
+
+  /* フッターA：旬の物〜（縦書き・下揃え） */
+  .footer-a-cell {
+    vertical-align: top; overflow: hidden;
+  }
+  .footer-a-inner {
+    height: 105mm;
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    align-items: flex-start;
+    overflow: hidden;
+    padding-top: 30mm;
+  }
+  .footer-note {
+    font-size: 10pt; letter-spacing: 0.06em; color: #333;
+    writing-mode: vertical-rl; text-orientation: mixed;
+  }
+
+  /* 横線 */
+  #divider {
+    position: absolute; height: 0.3mm;
+    background: #555; z-index: 10;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @media print {
+    #divider {
+      background: #555 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
+
+  .genre-hida { color: #8b4513; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <label>コース：</label>
+  <select id="courseSelect" onchange="switchCourse(this.value)">
+    <option value="yuki">雪コース</option>
+    <option value="tsuki">月コース</option>
+    <option value="hana">花コース</option>
+    <option value="hida">飛騨牛コース</option>
+  </select>
+  <span id="statusBadge" class="status-badge status-loading">読込中…</span>
+  <button class="btn-print" onclick="window.print()">🖨 印刷</button>
+</div>
+
+<div class="page">
+  <table class="outer-table">
+    <tr class="row-oshinagaki">
+      <td colspan="3" style="padding:0; height:105mm; position:relative;">
+        <div id="divider"></div>
+        <table class="inner-table" id="cellMain">
+          <tr class="row-label">
+            <td class="col-margin-l"></td>
+
+            <!-- フッターB：日付・館名（rowspan=2） -->
+            <td class="col-footer-b footer-b-cell" rowspan="2">
+              <span class="footer-date" id="footerDate">六月二十三日</span>
+              <span class="footer-hotel">謹庖　下呂観光ホテル</span>
+            </td>
+
+            <!-- フッターA：旬の物〜（rowspan=2） -->
+            <td class="col-footer-a footer-a-cell" id="col-footer-a" rowspan="2">
+              <div class="footer-a-inner">
+                <span class="footer-note">旬の物により</span>
+                <span class="footer-note">食材が変更になることがございます</span>
+              </div>
+            </td>
+
+            <!-- 空白（横線なし：フッターAとの境界） -->
+            <td class="col-spacer label-cell"></td>
+
+            <!-- 口直し -->
+            <td class="col-lpad-wide label-cell" id="label-kuchidori-lp"></td>
+            <td class="col-dish-b label-cell" id="label-kuchidori"><div class="label-inner"><span class="label-text">口直し</span></div></td>
+            <td class="col-rpad label-cell" id="label-kuchidori-rp"></td>
+            <!-- 止椀 -->
+            <td class="col-lpad label-cell" id="label-tomewan-lp"></td>
+            <td class="col-dish-b label-cell" id="label-tomewan"><div class="label-inner"><span class="label-text">止椀</span></div></td>
+            <td class="col-rpad label-cell" id="label-tomewan-rp"></td>
+            <!-- 香物 -->
+            <td class="col-lpad label-cell" id="label-konomono-lp"></td>
+            <td class="col-dish-b label-cell" id="label-konomono"><div class="label-inner"><span class="label-text">香物</span></div></td>
+            <td class="col-rpad label-cell" id="label-konomono-rp"></td>
+            <!-- 食事 -->
+            <td class="col-lpad label-cell" id="label-shokuji-lp"></td>
+            <td class="col-dish-b label-cell" id="label-shokuji"><div class="label-inner"><span class="label-text">食事</span></div></td>
+            <td class="col-rpad label-cell" id="label-shokuji-rp"></td>
+            <!-- 強肴 -->
+            <td class="col-lpad label-cell" id="label-shizakana-lp"></td>
+            <td class="col-det label-cell" id="label-shizakana-d2"></td>
+            <td class="col-det label-cell" id="label-shizakana-d1"></td>
+            <td class="col-dish-a label-cell" id="label-shizakana"><div class="label-inner"><span class="label-text">強肴</span></div></td>
+            <td class="col-rpad label-cell" id="label-shizakana-rp"></td>
+            <!-- 飛騨牛 -->
+            <td class="col-lpad label-cell hidden" id="label-hida-lp"></td>
+            <td class="col-det label-cell hidden" id="label-hida-d2"></td>
+            <td class="col-det label-cell hidden" id="label-hida-d1"></td>
+            <td class="col-dish-a label-cell hidden" id="label-hida"><div class="label-inner"><span class="label-text genre-hida">飛騨牛</span></div></td>
+            <td class="col-rpad label-cell hidden" id="label-hida-rp"></td>
+            <!-- 蓋物 -->
+            <td class="col-lpad label-cell" id="label-futamono-lp"></td>
+            <td class="col-det label-cell" id="label-futamono-d2"></td>
+            <td class="col-det label-cell" id="label-futamono-d1"></td>
+            <td class="col-dish-a label-cell" id="label-futamono"><div class="label-inner"><span class="label-text">蓋物</span></div></td>
+            <td class="col-rpad label-cell" id="label-futamono-rp"></td>
+            <!-- 焼物 -->
+            <td class="col-lpad label-cell" id="label-yakimono-lp"></td>
+            <td class="col-det label-cell" id="label-yakimono-d2"></td>
+            <td class="col-det label-cell" id="label-yakimono-d1"></td>
+            <td class="col-dish-a label-cell" id="label-yakimono"><div class="label-inner"><span class="label-text">焼物</span></div></td>
+            <td class="col-rpad label-cell" id="label-yakimono-rp"></td>
+            <!-- 楽盛り（8列・右から） -->
+            <td class="col-lpad label-cell" id="label-rakumori-lp"></td>
+            <td class="col-raku-item label-cell" id="label-raku-8"></td>
+            <td class="col-raku-item label-cell" id="label-raku-7"></td>
+            <td class="col-raku-item label-cell" id="label-raku-6"></td>
+            <td class="col-raku-item label-cell" id="label-raku-5"></td>
+            <td class="col-raku-item label-cell" id="label-raku-4"></td>
+            <td class="col-raku-item label-cell" id="label-raku-3"></td>
+            <td class="col-raku-item label-cell" id="label-raku-2"></td>
+            <td class="col-raku-item label-cell" id="label-raku-1"><div class="label-inner"><span class="label-text">楽盛り</span></div></td>
+            <td class="col-rpad label-cell" id="label-rakumori-rp"></td>
+            <!-- 造里 -->
+            <td class="col-lpad label-cell" id="label-tsukuri-lp"></td>
+            <td class="col-det label-cell" id="label-tsukuri-d2"></td>
+            <td class="col-det label-cell" id="label-tsukuri-d1"></td>
+            <td class="col-dish-a label-cell" id="label-tsukuri"><div class="label-inner"><span class="label-text">造里</span></div></td>
+            <td class="col-rpad label-cell" id="label-tsukuri-rp"></td>
+            <!-- 椀替り -->
+            <td class="col-lpad label-cell" id="label-wankawari-lp"></td>
+            <td class="col-det label-cell" id="label-wankawari-d2"></td>
+            <td class="col-det label-cell" id="label-wankawari-d1"></td>
+            <td class="col-dish-a label-cell" id="label-wankawari"><div class="label-inner"><span class="label-text">椀替り</span></div></td>
+            <td class="col-rpad label-cell" id="label-wankawari-rp"></td>
+            <!-- 先附 -->
+            <td class="col-lpad label-cell" id="label-sakizuke-lp"></td>
+            <td class="col-det label-cell" id="label-sakizuke-d2"></td>
+            <td class="col-det label-cell" id="label-sakizuke-d1"></td>
+            <td class="col-dish-a label-cell" id="label-sakizuke"><div class="label-inner"><span class="label-text">先附</span></div></td>
+            <td class="col-rpad label-cell" id="label-sakizuke-rp"></td>
+
+            <!-- タイトル rowspan=2 -->
+            <td class="col-title title-cell" rowspan="2">
+              <div class="title-inner">
+                <span class="title-main" id="titleMonth">水無月　御献立</span>
+                <span class="title-course" id="titleCourse">雪コース</span>
+              </div>
+            </td>
+            <td class="col-margin-r"></td>
+          </tr>
+
+          <tr class="row-content-inner">
+            <td class="col-margin-l"></td>
+            <td class="col-spacer"></td>
+            <!-- 口直し -->
+            <td class="col-lpad-wide content-cell" id="col-kuchidori-lp"></td>
+            <td class="col-dish-b content-cell" id="col-kuchidori"><div class="content-inner"><span class="dish" id="d-kuchidori"></span></div></td>
+            <td class="col-rpad content-cell" id="col-kuchidori-rp"></td>
+            <!-- 止椀 -->
+            <td class="col-lpad content-cell" id="col-tomewan-lp"></td>
+            <td class="col-dish-b content-cell" id="col-tomewan"><div class="content-inner"><span class="dish" id="d-tomewan"></span></div></td>
+            <td class="col-rpad content-cell" id="col-tomewan-rp"></td>
+            <!-- 香物 -->
+            <td class="col-lpad content-cell" id="col-konomono-lp"></td>
+            <td class="col-dish-b content-cell" id="col-konomono"><div class="content-inner"><span class="dish" id="d-konomono"></span></div></td>
+            <td class="col-rpad content-cell" id="col-konomono-rp"></td>
+            <!-- 食事 -->
+            <td class="col-lpad content-cell" id="col-shokuji-lp"></td>
+            <td class="col-dish-b content-cell" id="col-shokuji"><div class="content-inner" id="d-shokuji-multi"></div></td>
+            <td class="col-rpad content-cell" id="col-shokuji-rp"></td>
+            <!-- 強肴 -->
+            <td class="col-lpad content-cell" id="col-shizakana-lp"></td>
+            <td class="col-det content-cell" id="col-shizakana-d2"><div class="content-inner"><span class="det" id="d-shizakana-d2"></span></div></td>
+            <td class="col-det content-cell" id="col-shizakana-d1"><div class="content-inner"><span class="det" id="d-shizakana-d1"></span></div></td>
+            <td class="col-dish-a content-cell" id="col-shizakana"><div class="content-inner"><span class="dish" id="d-shizakana"></span></div></td>
+            <td class="col-rpad content-cell" id="col-shizakana-rp"></td>
+            <!-- 飛騨牛 -->
+            <td class="col-lpad content-cell hidden" id="col-hida-lp"></td>
+            <td class="col-det content-cell hidden" id="col-hida-d2"><div class="content-inner"><span class="det" id="d-hida-d2"></span></div></td>
+            <td class="col-det content-cell hidden" id="col-hida-d1"><div class="content-inner"><span class="det" id="d-hida-d1"></span></div></td>
+            <td class="col-dish-a content-cell hidden" id="col-hida"><div class="content-inner"><span class="dish" id="d-hida"></span></div></td>
+            <td class="col-rpad content-cell hidden" id="col-hida-rp"></td>
+            <!-- 蓋物 -->
+            <td class="col-lpad content-cell" id="col-futamono-lp"></td>
+            <td class="col-det content-cell" id="col-futamono-d2"><div class="content-inner"><span class="det" id="d-futamono-d2"></span></div></td>
+            <td class="col-det content-cell" id="col-futamono-d1"><div class="content-inner"><span class="det" id="d-futamono-d1"></span></div></td>
+            <td class="col-dish-a content-cell" id="col-futamono"><div class="content-inner"><span class="dish" id="d-futamono"></span></div></td>
+            <td class="col-rpad content-cell" id="col-futamono-rp"></td>
+            <!-- 焼物 -->
+            <td class="col-lpad content-cell" id="col-yakimono-lp"></td>
+            <td class="col-det content-cell" id="col-yakimono-d2"><div class="content-inner"><span class="det" id="d-yakimono-d2"></span></div></td>
+            <td class="col-det content-cell" id="col-yakimono-d1"><div class="content-inner"><span class="det" id="d-yakimono-d1"></span></div></td>
+            <td class="col-dish-a content-cell" id="col-yakimono"><div class="content-inner"><span class="dish" id="d-yakimono"></span></div></td>
+            <td class="col-rpad content-cell" id="col-yakimono-rp"></td>
+            <!-- 楽盛り -->
+            <td class="col-lpad content-cell" id="col-rakumori-lp"></td>
+            <td class="col-raku-item content-cell" id="col-raku-8"><div class="content-inner"><span class="det" id="d-raku-8"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-7"><div class="content-inner"><span class="det" id="d-raku-7"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-6"><div class="content-inner"><span class="det" id="d-raku-6"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-5"><div class="content-inner"><span class="det" id="d-raku-5"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-4"><div class="content-inner"><span class="det" id="d-raku-4"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-3"><div class="content-inner"><span class="det" id="d-raku-3"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-2"><div class="content-inner"><span class="det" id="d-raku-2"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-1"><div class="content-inner"><span class="det" id="d-raku-1"></span></div></td>
+            <td class="col-rpad content-cell" id="col-rakumori-rp"></td>
+            <!-- 造里 -->
+            <td class="col-lpad content-cell" id="col-tsukuri-lp"></td>
+            <td class="col-det content-cell" id="col-tsukuri-d2"><div class="content-inner"><span class="det" id="d-tsukuri-d2"></span></div></td>
+            <td class="col-det content-cell" id="col-tsukuri-d1"><div class="content-inner"><span class="det" id="d-tsukuri-d1"></span></div></td>
+            <td class="col-dish-a content-cell" id="col-tsukuri"><div class="content-inner"><span class="dish" id="d-tsukuri"></span></div></td>
+            <td class="col-rpad content-cell" id="col-tsukuri-rp"></td>
+            <!-- 椀替り -->
+            <td class="col-lpad content-cell" id="col-wankawari-lp"></td>
+            <td class="col-det content-cell" id="col-wankawari-d2"><div class="content-inner"><span class="det" id="d-wankawari-d2"></span></div></td>
+            <td class="col-det content-cell" id="col-wankawari-d1"><div class="content-inner"><span class="det" id="d-wankawari-d1"></span></div></td>
+            <td class="col-dish-a content-cell" id="col-wankawari"><div class="content-inner"><span class="dish" id="d-wankawari"></span></div></td>
+            <td class="col-rpad content-cell" id="col-wankawari-rp"></td>
+            <!-- 先附 -->
+            <td class="col-lpad content-cell" id="col-sakizuke-lp"></td>
+            <td class="col-det content-cell" id="col-sakizuke-d2"><div class="content-inner"><span class="det" id="d-sakizuke-d2"></span></div></td>
+            <td class="col-det content-cell" id="col-sakizuke-d1"><div class="content-inner"><span class="det" id="d-sakizuke-d1"></span></div></td>
+            <td class="col-dish-a content-cell" id="col-sakizuke"><div class="content-inner"><span class="dish" id="d-sakizuke"></span></div></td>
+            <td class="col-rpad content-cell" id="col-sakizuke-rp"></td>
+            <td class="col-margin-r"></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBk4saCx38rdIL6ih0wDaQWjoxlGwjSpS8",
+  authDomain: "geroyado-oshinagaki.firebaseapp.com",
+  databaseURL: "https://geroyado-oshinagaki-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "geroyado-oshinagaki",
+  storageBucket: "geroyado-oshinagaki.firebasestorage.app",
+  messagingSenderId: "389593436209",
+  appId: "1:389593436209:web:40b819f3e0b9821aed0510"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+const today = new Date();
+const dateKey = today.getFullYear() + '-'
+  + String(today.getMonth()+1).padStart(2,'0') + '-'
+  + String(today.getDate()).padStart(2,'0');
+
+const kanjiMonths    = ['睦月','如月','弥生','卯月','皐月','水無月','文月','葉月','長月','神無月','霜月','師走'];
+const kanjiMonthNums = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
+const kanjiDays      = ['','一','二','三','四','五','六','七','八','九','十',
+  '十一','十二','十三','十四','十五','十六','十七','十八','十九','二十',
+  '二十一','二十二','二十三','二十四','二十五','二十六','二十七','二十八','二十九','三十','三十一'];
+
+document.getElementById('titleMonth').textContent = kanjiMonths[today.getMonth()] + '　御献立';
+document.getElementById('footerDate').textContent = kanjiMonthNums[today.getMonth()] + '月' + kanjiDays[today.getDate()] + '日';
+
+function setEl(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val || '';
+}
+
+function applyData(course, data) {
+  const cd = (data && data.courses && data.courses[course]) || {};
+  ['sakizuke','wankawari','tsukuri','yakimono','futamono','shizakana','hida',
+   'konomono','tomewan','kuchidori'].forEach(g => {
+    const gd = cd[g] || {};
+    setEl(`d-${g}`,    gd.dish    || '');
+    setEl(`d-${g}-d1`, gd.detail1 || '');
+    setEl(`d-${g}-d2`, gd.detail2 || '');
+  });
+  const shokujiEl = document.getElementById('d-shokuji-multi');
+  if (shokujiEl) {
+    shokujiEl.innerHTML = '';
+    ((cd.shokuji || {}).dish || '').split('\n').forEach(line => {
+      if (!line.trim()) return;
+      const span = document.createElement('span');
+      span.className = 'dish';
+      span.style.writingMode = 'vertical-rl';
+      span.textContent = line.trim();
+      shokujiEl.appendChild(span);
+    });
+  }
+  const rakuItems = [
+    ...((cd['rakumori_a'] || {}).items || []),
+    ...((cd['rakumori_b'] || {}).items || []),
+  ];
+  for (let i = 1; i <= 8; i++) setEl(`d-raku-${i}`, rakuItems[i-1] || '');
+}
+
+let currentData = null;
+let currentCourse = 'yuki';
+
+onValue(ref(db, `daily/${dateKey}`), (snap) => {
+  currentData = snap.val();
+  const badge = document.getElementById('statusBadge');
+  if (!currentData) {
+    badge.textContent = 'データなし'; badge.className = 'status-badge status-draft';
+  } else if (currentData.status === 'confirmed') {
+    badge.textContent = '確定済み'; badge.className = 'status-badge status-confirmed';
+  } else {
+    badge.textContent = '未確定'; badge.className = 'status-badge status-draft';
+  }
+  applyData(currentCourse, currentData);
+});
+
+window._applyData = (course) => applyData(course, currentData);
+
+function updateDivider() {
+  const base    = document.getElementById('cellMain').getBoundingClientRect();
+  const footerA = document.getElementById('col-footer-a').getBoundingClientRect();
+  const sakRp   = document.getElementById('col-sakizuke-rp').getBoundingClientRect();
+  const labelRef = document.getElementById('label-sakizuke');
+  const labelBottom = labelRef ? labelRef.getBoundingClientRect().bottom - base.top : 0;
+  const d = document.getElementById('divider');
+  d.style.top   = labelBottom + 'px';
+  d.style.left  = (footerA.right - base.left) + 'px';
+  d.style.width = (sakRp.right - footerA.right) + 'px';
+}
+window.updateDivider = updateDivider;
+window.addEventListener('load', updateDivider);
+</script>
+
+<script>
+const courseNames = { yuki:'雪コース', tsuki:'月コース', hana:'花コース', hida:'飛騨牛コース' };
+
+function getIds(key, hasDetail) {
+  const base = [`col-${key}`,`col-${key}-lp`,`col-${key}-rp`,
+                `label-${key}`,`label-${key}-lp`,`label-${key}-rp`];
+  if (hasDetail) base.push(`col-${key}-d1`,`col-${key}-d2`,`label-${key}-d1`,`label-${key}-d2`);
+  return base;
+}
+
+const hiddenByCourse = {
+  yuki:  [],
+  tsuki: getIds('wankawari', true),
+  hana:  [...getIds('wankawari', true), ...getIds('futamono', true)],
+  hida:  getIds('shizakana', true),
+};
+
+function switchCourse(course) {
+  ['kuchidori','tomewan','konomono','shokuji'].forEach(k => getIds(k,false).forEach(id => document.getElementById(id)?.classList.remove('hidden')));
+  ['shizakana','hida','futamono','yakimono','tsukuri','wankawari','sakizuke'].forEach(k => getIds(k,true).forEach(id => document.getElementById(id)?.classList.remove('hidden')));
+  for(let i=1;i<=8;i++) [`col-raku-${i}`,`label-raku-${i}`].forEach(id => document.getElementById(id)?.classList.remove('hidden'));
+  ['col-rakumori-lp','col-rakumori-rp','label-rakumori-lp','label-rakumori-rp'].forEach(id => document.getElementById(id)?.classList.remove('hidden'));
+
+  if (course !== 'hida') getIds('hida', true).forEach(id => document.getElementById(id)?.classList.add('hidden'));
+  (hiddenByCourse[course] || []).forEach(id => document.getElementById(id)?.classList.add('hidden'));
+  document.getElementById('titleCourse').textContent = courseNames[course] || '';
+  if (window._applyData) window._applyData(course);
+  setTimeout(() => { if (window.updateDivider) window.updateDivider(); }, 50);
+}
+
+switchCourse('yuki');
+</script>
+</body>
+</html>

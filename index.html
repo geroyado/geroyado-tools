@@ -146,6 +146,46 @@
     line-height: 1.8;
   }
 
+
+  /* お品書き確定アラート */
+  .oshinagaki-alert {
+    margin: 0 16px 4px;
+    padding: 14px 16px;
+    background: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: #1b5e20;
+  }
+  @media (prefers-color-scheme: dark) {
+    .oshinagaki-alert {
+      background: #1b3a1e;
+      border-color: #2e6b31;
+      color: #a5d6a7;
+    }
+  }
+  .oshinagaki-alert-body { flex: 1; line-height: 1.6; }
+  .oshinagaki-alert-title { font-weight: 600; margin-bottom: 2px; }
+  .oshinagaki-alert-time { font-size: 11px; opacity: 0.8; }
+  .btn-print-alert {
+    padding: 8px 14px;
+    background: #2d6a2d;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .btn-print-alert:hover { background: #1e4a1e; }
   @media (max-width: 480px) {
     body { padding: 0 0 40px; }
     #app { border-radius: 0; border-left: none; border-right: none; }
@@ -175,6 +215,19 @@
   <div class="tool-list">
     <div id="calendar-loading" style="padding:12px 0; font-size:12px; color:var(--text-tertiary);">読み込み中…</div>
     <div id="calendar-list"></div>
+  </div>
+
+  <!-- お品書き確定アラート（確定済み時のみ表示） -->
+  <div id="oshinagaki-alert" style="display:none;">
+    <div style="height:12px;"></div>
+    <div class="oshinagaki-alert">
+      <div style="font-size:24px; flex-shrink:0;">📋</div>
+      <div class="oshinagaki-alert-body">
+        <div class="oshinagaki-alert-title">本日のお品書きが確定されました</div>
+        <div class="oshinagaki-alert-time" id="oshinagaki-confirmed-time"></div>
+      </div>
+      <a class="btn-print-alert" href="tools/oshinagaki/obandbook_print_v88.html" target="_blank">🖨 印刷する</a>
+    </div>
   </div>
 
   <div class="section-label">経営レポート</div>
@@ -259,11 +312,31 @@
       </div>
       <div class="tool-arrow">›</div>
     </a>
+    <a class="tool-card" href="tools/oshinagaki/obandbook_input.html" target="_blank" rel="noopener">
+      <div class="tool-icon" style="background:#FFF8E1;">📝</div>
+      <div class="tool-body">
+        <div class="tool-name">お品書き入力</div>
+        <div class="tool-desc">料理長専用。本日のコース料理内容を入力・確定します</div>
+      </div>
+      <div class="tool-arrow">›</div>
+    </a>
     <a class="tool-card" href="monthly_report_upload.html">
       <div class="tool-icon" style="background:#EEE8F5;">📤</div>
       <div class="tool-body">
         <div class="tool-name">月次概況 アップロード</div>
         <div class="tool-desc">生成したPDFをアップロードして閲覧ページに反映します</div>
+      </div>
+      <div class="tool-arrow">›</div>
+    </a>
+  </div>
+
+  <div class="section-label">お品書き印刷</div>
+  <div class="tool-list">
+    <a class="tool-card" href="tools/oshinagaki/obandbook_print_v88.html" target="_blank" rel="noopener">
+      <div class="tool-icon" style="background:#FFF8E1;">🖨️</div>
+      <div class="tool-body">
+        <div class="tool-name">お品書き印刷</div>
+        <div class="tool-desc">本日の献立を印刷します。通常は確定アラートのボタンから操作してください</div>
       </div>
       <div class="tool-arrow">›</div>
     </a>
@@ -392,6 +465,28 @@
   }
 
   window.addEventListener('load', fetchEvents);
+
+  // お品書き確定状況チェック
+  (async function() {
+    try {
+      const today = new Date();
+      const dateKey = today.getFullYear() + '-'
+        + String(today.getMonth()+1).padStart(2,'0') + '-'
+        + String(today.getDate()).padStart(2,'0');
+      const DB_URL = 'https://geroyado-oshinagaki-default-rtdb.asia-southeast1.firebasedatabase.app';
+      const res = await fetch(`${DB_URL}/daily/${dateKey}.json`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.status === 'confirmed' && data.confirmed_at) {
+        const t = new Date(data.confirmed_at);
+        const hm = t.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('oshinagaki-confirmed-time').textContent = hm + ' に確定されました。印刷を開始してください。';
+        document.getElementById('oshinagaki-alert').style.display = 'block';
+      }
+    } catch(e) {
+      // 取得失敗時は非表示のまま
+    }
+  })();
 
   // 稼働率キャプション：GitHubのJSONから取得
   (async function() {
