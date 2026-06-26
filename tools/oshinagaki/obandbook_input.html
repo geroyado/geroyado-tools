@@ -364,7 +364,7 @@ function renderForm(course) {
       if (!genre.isRaku) {
         const delBtn = document.createElement('button');
         delBtn.className = 'btn-delete-genre';
-        delBtn.textContent = '🗑 削除';
+        delBtn.textContent = '🗑 この料理を削除';
         delBtn.onclick = () => deleteGenre(genre.key);
         copyBtns.appendChild(delBtn);
       }
