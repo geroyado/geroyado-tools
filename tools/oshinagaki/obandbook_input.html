@@ -257,7 +257,7 @@ const GENRES = [
   { key: 'sakizuke',   name: '先附',   isRaku: false },
   { key: 'wankawari',  name: '椀替り',  isRaku: false },
   { key: 'tsukuri',    name: '造里',   isRaku: false },
-  { key: 'rakumori',   name: '楽盛り',  isRaku: true,  rakulen: 9 },
+  { key: 'rakumori',   name: '楽盛り',  isRaku: true,  rakulen: 8 },
   { key: 'yakimono',   name: '焼物',   isRaku: false },
   { key: 'futamono',   name: '蓋物',   isRaku: false },
   { key: 'shizakana',  name: '強肴',   isRaku: false },
@@ -356,8 +356,10 @@ function renderForm(course) {
     body.className = 'genre-body';
 
     if (genre.isRaku) {
-      // 楽盛り
-      const items = gd.items || Array(genre.rakulen).fill('');
+      // 楽盛り（rakumori_a: 0-4, rakumori_b: 5-7）
+      const raA = (memData.courses[currentCourse]['rakumori_a'] || {}).items || [];
+      const raB = (memData.courses[currentCourse]['rakumori_b'] || {}).items || [];
+      const items = [...raA, ...raB].concat(Array(genre.rakulen).fill('')).slice(0, genre.rakulen);
       const list = document.createElement('div');
       list.className = 'raku-list';
       for (let i = 0; i < genre.rakulen; i++) {
@@ -377,14 +379,17 @@ function renderForm(course) {
       body.appendChild(list);
     } else {
       // 通常
-      [['dish','料理名'],['detail1','補足1'],['detail2','補足2'],['detail3','補足3']].forEach(([key, label]) => {
+      [['label','品名'],['menu','料理名'],['detail1','補足1'],['detail2','補足2']].forEach(([key, lbl]) => {
         const row = document.createElement('div');
         row.className = 'field-row';
-        row.innerHTML = `<span class="field-label">${label}</span>`;
+        row.innerHTML = `<span class="field-label">${lbl}</span>`;
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'field-input';
         input.value = gd[key] || '';
+        if (key === 'label') {
+          input.placeholder = genre.name;  // デフォルトラベルをプレースホルダーに
+        }
         input.dataset.genre = genre.key;
         input.dataset.field = key;
         input.addEventListener('input', onFieldInput);
@@ -407,9 +412,17 @@ function onFieldInput(e) {
 
 function onRakuInput(e) {
   const { genre, idx } = e.target.dataset;
-  if (!memData.courses[currentCourse][genre]) memData.courses[currentCourse][genre] = { items: [] };
-  if (!memData.courses[currentCourse][genre].items) memData.courses[currentCourse][genre].items = [];
-  memData.courses[currentCourse][genre].items[parseInt(idx)] = e.target.value;
+  const i = parseInt(idx);
+  const c = currentCourse;
+  if (!memData.courses[c]['rakumori_a']) memData.courses[c]['rakumori_a'] = { items: [] };
+  if (!memData.courses[c]['rakumori_b']) memData.courses[c]['rakumori_b'] = { items: [] };
+  if (i < 5) {
+    if (!memData.courses[c]['rakumori_a'].items) memData.courses[c]['rakumori_a'].items = [];
+    memData.courses[c]['rakumori_a'].items[i] = e.target.value;
+  } else {
+    if (!memData.courses[c]['rakumori_b'].items) memData.courses[c]['rakumori_b'].items = [];
+    memData.courses[c]['rakumori_b'].items[i - 5] = e.target.value;
+  }
 }
 
 // グループ・タブ切り替え

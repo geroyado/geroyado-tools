@@ -161,6 +161,7 @@
     }
   }
 
+  .hidden-empty { display: none !important; }
   .genre-hida { color: #8b4513; }
   .hidden { display: none !important; }
 </style>
@@ -403,17 +404,56 @@ function setEl(id, val) {
 
 function applyData(course, data) {
   const cd = (data && data.courses && data.courses[course]) || {};
+  const GENRE_DEFAULTS = {
+    sakizuke:'先附', wankawari:'椀替り', tsukuri:'造里',
+    yakimono:'焼物', futamono:'蓋物', shizakana:'強肴', hida:'飛騨牛',
+    konomono:'香物', tomewan:'止椀', kuchidori:'口直し', shokuji:'食事'
+  };
+
   ['sakizuke','wankawari','tsukuri','yakimono','futamono','shizakana','hida',
    'konomono','tomewan','kuchidori'].forEach(g => {
     const gd = cd[g] || {};
-    setEl(`d-${g}`,    gd.dish    || '');
-    setEl(`d-${g}-d1`, gd.detail1 || '');
-    setEl(`d-${g}-d2`, gd.detail2 || '');
+    const menu   = gd.menu    || '';
+    const detail1 = gd.detail1 || '';
+    const detail2 = gd.detail2 || '';
+    const label   = gd.label   || GENRE_DEFAULTS[g] || '';
+
+    // ラベル更新
+    const labelEl = document.querySelector(`#label-${g} .label-text`);
+    if (labelEl) labelEl.textContent = label;
+
+    // 全空欄判定（label除く：labelは自動補完されるため menu+detail1+detail2で判断）
+    const isEmpty = !menu && !detail1 && !detail2;
+    const colIds = [`col-${g}`,`col-${g}-lp`,`col-${g}-rp`,
+                    `label-${g}`,`label-${g}-lp`,`label-${g}-rp`,
+                    `col-${g}-d1`,`col-${g}-d2`,`label-${g}-d1`,`label-${g}-d2`];
+    colIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (isEmpty) el.classList.add('hidden-empty');
+      else el.classList.remove('hidden-empty');
+    });
+
+    setEl(`d-${g}`,    menu);
+    setEl(`d-${g}-d1`, detail1);
+    setEl(`d-${g}-d2`, detail2);
   });
+  // 食事の全空欄判定
+  const shokujiData = cd.shokuji || {};
+  const shokujiEmpty = !shokujiData.menu && !shokujiData.detail1 && !shokujiData.detail2;
+  ['col-shokuji','col-shokuji-lp','col-shokuji-rp','label-shokuji','label-shokuji-lp','label-shokuji-rp'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (shokujiEmpty) el.classList.add('hidden-empty');
+    else el.classList.remove('hidden-empty');
+  });
+  const labelShokujiEl = document.querySelector('#label-shokuji .label-text');
+  if (labelShokujiEl) labelShokujiEl.textContent = shokujiData.label || '食事';
+
   const shokujiEl = document.getElementById('d-shokuji-multi');
   if (shokujiEl) {
     shokujiEl.innerHTML = '';
-    ((cd.shokuji || {}).dish || '').split('\n').forEach(line => {
+    ((cd.shokuji || {}).menu || '').split('\n').forEach(line => {
       if (!line.trim()) return;
       const span = document.createElement('span');
       span.className = 'dish';
@@ -426,7 +466,25 @@ function applyData(course, data) {
     ...((cd['rakumori_a'] || {}).items || []),
     ...((cd['rakumori_b'] || {}).items || []),
   ];
-  for (let i = 1; i <= 8; i++) setEl(`d-raku-${i}`, rakuItems[i-1] || '');
+  const rakuEmpty = rakuItems.every(item => !item);
+  ['col-rakumori-lp','col-rakumori-rp','label-rakumori-lp','label-rakumori-rp'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (rakuEmpty) el.classList.add('hidden-empty');
+    else el.classList.remove('hidden-empty');
+  });
+  for (let i = 1; i <= 8; i++) {
+    const el1 = document.getElementById(`col-raku-${i}`);
+    const el2 = document.getElementById(`label-raku-${i}`);
+    if (rakuEmpty) {
+      el1?.classList.add('hidden-empty');
+      el2?.classList.add('hidden-empty');
+    } else {
+      el1?.classList.remove('hidden-empty');
+      el2?.classList.remove('hidden-empty');
+    }
+    setEl(`d-raku-${i}`, rakuItems[i-1] || '');
+  }
 }
 
 let currentData = null;
