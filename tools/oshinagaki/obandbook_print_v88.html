@@ -403,6 +403,13 @@ function setEl(id, val) {
 
 function applyData(course, data) {
   const cd = (data && data.courses && data.courses[course]) || {};
+  function formatLabel(str) {
+    if (!str) return str;
+    const s = str.trim();
+    if (s.length === 2) return s[0] + '　' + s[1]; // 全角スペースを挿入
+    return s;
+  }
+
   const GENRE_DEFAULTS = {
     sakizuke:'料理1', wankawari:'料理2', tsukuri:'料理3',
     yakimono:'料理4', futamono:'料理5', shizakana:'料理6', hida:'料理11',
@@ -415,7 +422,7 @@ function applyData(course, data) {
     const menu   = gd.menu    || '';
     const detail1 = gd.detail1 || '';
     const detail2 = gd.detail2 || '';
-    const label   = gd.label   || GENRE_DEFAULTS[g] || '';
+    const label   = formatLabel(gd.label   || GENRE_DEFAULTS[g] || '');
 
     // ラベル更新
     const labelEl = document.querySelector(`#label-${g} .label-text`);
@@ -447,7 +454,7 @@ function applyData(course, data) {
     else el.classList.remove('hidden-empty');
   });
   const labelShokujiEl = document.querySelector('#label-shokuji .label-text');
-  if (labelShokujiEl) labelShokujiEl.textContent = shokujiData.label || '食事';
+  if (labelShokujiEl) labelShokujiEl.textContent = formatLabel(shokujiData.label || '食事');
 
   const shokujiEl = document.getElementById('d-shokuji-multi');
   if (shokujiEl) {
