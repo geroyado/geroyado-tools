@@ -254,21 +254,18 @@ document.getElementById('headerDate').textContent =
 
 // 料理区分定義
 const GENRES = [
-  { key: 'sakizuke',   name: '先附',   isRaku: false },
-  { key: 'wankawari',  name: '椀替り',  isRaku: false },
-  { key: 'tsukuri',    name: '造里',   isRaku: false },
-  { key: 'rakumori',   name: '楽盛り',  isRaku: true,  rakulen: 8 },
-  { key: 'yakimono',   name: '焼物',   isRaku: false },
-  { key: 'futamono',   name: '蓋物',   isRaku: false },
-  { key: 'shizakana',  name: '強肴',   isRaku: false },
-  { key: 'shokuji',    name: '食事',   isRaku: false },
-  { key: 'konomono',   name: '香物',   isRaku: false },
-  { key: 'tomewan',    name: '止椀',   isRaku: false },
-  { key: 'kuchidori',  name: '口直し',  isRaku: false },
-];
-
-const HIDA_GENRES = [
-  { key: 'hida',       name: '飛騨牛区間', isRaku: false, isHida: true },
+  { key: 'sakizuke',   name: '料理1',  isRaku: false },
+  { key: 'wankawari',  name: '料理2',  isRaku: false },
+  { key: 'tsukuri',    name: '料理3',  isRaku: false },
+  { key: 'rakumori',   name: '楽盛り', isRaku: true,  rakulen: 8 },
+  { key: 'yakimono',   name: '料理4',  isRaku: false },
+  { key: 'futamono',   name: '料理5',  isRaku: false },
+  { key: 'shizakana',  name: '料理6',  isRaku: false },
+  { key: 'shokuji',    name: '料理7',  isRaku: false },
+  { key: 'konomono',   name: '料理8',  isRaku: false },
+  { key: 'tomewan',    name: '料理9',  isRaku: false },
+  { key: 'kuchidori',  name: '料理10', isRaku: false },
+  { key: 'hida',       name: '料理11', isRaku: false },
 ];
 
 const COURSES = ['yuki','tsuki','hana','hida','yuki_2','tsuki_2','hana_2','hida_2'];
@@ -319,13 +316,11 @@ function renderForm(course) {
   const area = document.getElementById('formArea');
   area.innerHTML = '';
   const courseData = memData.courses[course] || {};
-  const genres = course === 'hida'
-    ? [...GENRES, ...HIDA_GENRES]
-    : GENRES;
+  const genres = GENRES;
 
   genres.forEach(genre => {
     const card = document.createElement('div');
-    card.className = 'genre-card' + (genre.isHida ? ' hida' : '');
+    card.className = 'genre-card';
 
     const gd = courseData[genre.key] || {};
 
