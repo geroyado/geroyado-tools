@@ -489,6 +489,13 @@ function renderForm(course) {
     card.appendChild(body);
     area.appendChild(card);
   });
+
+  // 確定済み時はフィールドを無効化
+  if (isConfirmed) {
+    document.querySelectorAll('.field-input').forEach(el => { el.disabled = true; });
+    document.querySelectorAll('.raku-input').forEach(el => { el.disabled = true; });
+    document.querySelectorAll('.btn-copy-small, .btn-delete-genre, .btn-copy, .btn-save').forEach(el => { el.disabled = true; });
+  }
 }
 
 // 入力イベント
