@@ -503,18 +503,28 @@ function applyData(course, data) {
     if (rakuEmpty) el.classList.add('hidden-empty');
     else el.classList.remove('hidden-empty');
   });
+
+  // 空の楽盛り列を非表示にして左余白に加算
+  const rakuItemWidth = 4; // mm
+  let hiddenRakuCount = 0;
   for (let i = 1; i <= 9; i++) {
     const el1 = document.getElementById(`col-raku-${i}`);
     const el2 = document.getElementById(`label-raku-${i}`);
-    if (rakuEmpty) {
+    const isEmpty = !rakuItems[i-1];
+    if (rakuEmpty || isEmpty) {
       el1?.classList.add('hidden-empty');
       el2?.classList.add('hidden-empty');
+      if (!rakuEmpty) hiddenRakuCount++;
     } else {
       el1?.classList.remove('hidden-empty');
       el2?.classList.remove('hidden-empty');
     }
     setEl(`d-raku-${i}`, rakuItems[i-1] || '');
   }
+  // 非表示になった列分を左余白に加算
+  const marginL = document.querySelectorAll('.col-margin-l');
+  const extraMm = hiddenRakuCount * rakuItemWidth;
+  marginL.forEach(el => { el.style.width = (12 + extraMm) + 'mm'; });
 }
 
 let currentData = null;
