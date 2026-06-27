@@ -287,18 +287,48 @@ COURSES.forEach(c => { memData.courses[c] = {}; });
 let currentCourse = 'yuki';
 let isConfirmed = false;
 
-// Firebaseから読み込み
+// Firebaseから読み込み（今日のデータがなければ前日分を引き継ぎ）
 const dataRef = ref(db, `daily/${dateKey}`);
-onValue(dataRef, (snap) => {
+onValue(dataRef, async (snap) => {
   const val = snap.val();
   if (val) {
+    // 今日のデータが存在する場合
     memData = val;
     if (!memData.courses) memData.courses = {};
     COURSES.forEach(c => { if (!memData.courses[c]) memData.courses[c] = {}; });
     isConfirmed = val.status === 'confirmed';
     updateStatusBadge();
+    renderForm(currentCourse);
+  } else {
+    // 今日のデータがない場合、前日データを探して引き継ぎ
+    isConfirmed = false;
+    let inherited = false;
+    for (let i = 1; i <= 7; i++) {
+      const prev = new Date(today);
+      prev.setDate(prev.getDate() - i);
+      const prevKey = prev.getFullYear() + '-'
+        + String(prev.getMonth()+1).padStart(2,'0') + '-'
+        + String(prev.getDate()).padStart(2,'0');
+      const prevSnap = await get(ref(db, `daily/${prevKey}`));
+      if (prevSnap.exists()) {
+        const prevData = prevSnap.val();
+        memData = {
+          status: 'draft',
+          courses: JSON.parse(JSON.stringify(prevData.courses || {}))
+        };
+        COURSES.forEach(c => { if (!memData.courses[c]) memData.courses[c] = {}; });
+        inherited = true;
+        showToast('📋 前日のデータを引き継ぎました');
+        break;
+      }
+    }
+    if (!inherited) {
+      memData = { status: 'draft', courses: {} };
+      COURSES.forEach(c => { memData.courses[c] = {}; });
+    }
+    updateStatusBadge();
+    renderForm(currentCourse);
   }
-  renderForm(currentCourse);
 }, { onlyOnce: true });
 
 function updateStatusBadge() {
