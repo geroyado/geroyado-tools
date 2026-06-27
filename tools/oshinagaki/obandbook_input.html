@@ -607,7 +607,7 @@ window.confirmCopyAll = function() {
 };
 
 // 単一区分コピー
-window.copyGenre = function(genreKey, from, to) {
+window.copyGenre = async function(genreKey, from, to) {
   if (!memData.courses[to]) memData.courses[to] = {};
   // 楽盛りはrakumori_a/rakumori_bの2キーをコピー
   if (genreKey === 'rakumori') {
@@ -620,6 +620,7 @@ window.copyGenre = function(genreKey, from, to) {
     if (!memData.courses[from][genreKey]) return;
     memData.courses[to][genreKey] = JSON.parse(JSON.stringify(memData.courses[from][genreKey]));
   }
+  await window.saveData();
   showToast(`📋 ${COURSE_NAMES[to]}コースにコピーしました`);
   renderForm(currentCourse);
 };
