@@ -47,6 +47,7 @@
   .btn-confirm:hover { background: #1e4a1e; }
   .btn-confirm:disabled { background: #999; cursor: not-allowed; }
   .btn-reopen { background: #7a5c00; color: #fff; font-size: 13px; padding: 8px 16px; margin-left: 8px; }
+  .badge-printed { background: #3a5a8a; color: #fff; margin-left: 8px; font-size: 12px; padding: 3px 10px; border-radius: 3px; }
   .btn-reopen:hover { background: #5a4200; }
 
 
@@ -192,6 +193,7 @@
     <button class="btn btn-save" onclick="saveData()">💾 一時保存</button>
     <button class="btn btn-confirm" id="btnConfirm" onclick="confirmAll()">✅ 全ての献立を確定する</button>
     <button class="btn btn-reopen" id="btnReopen" onclick="reopenAll()" style="display:none;">✏️ 確定を解除して編集する</button>
+    <span class="badge-printed" id="badgePrinted" style="display:none;"></span>
   </div>
 
   <!-- グループタブ（通常／連泊） -->
@@ -344,12 +346,24 @@ function updateStatusBadge() {
     btn.textContent = '✅ 再確定する';
     btn.disabled = false;
     if (reopenBtn) reopenBtn.style.display = '';
+    const printedBadge = document.getElementById('badgePrinted');
+    if (printedBadge) {
+      if (memData.printed_at) {
+        const pt = new Date(memData.printed_at).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
+        printedBadge.textContent = '🖨 本日印刷済み（' + pt + '）';
+        printedBadge.style.display = '';
+      } else {
+        printedBadge.style.display = 'none';
+      }
+    }
   } else {
     badge.textContent = '未確定';
     badge.className = 'status-badge badge-draft';
     btn.textContent = '✅ 全ての献立を確定する';
     btn.disabled = false;
     if (reopenBtn) reopenBtn.style.display = 'none';
+    const printedBadge2 = document.getElementById('badgePrinted');
+    if (printedBadge2) printedBadge2.style.display = 'none';
   }
 }
 
@@ -536,6 +550,7 @@ window.confirmAll = function() {
     async () => {
       memData.status = 'confirmed';
       memData.confirmed_at = new Date().toISOString();
+      memData.printed_at = null;  // 再確定時は印刷済みをリセット
       await set(ref(db, `daily/${dateKey}`), memData);
       isConfirmed = true;
       updateStatusBadge();

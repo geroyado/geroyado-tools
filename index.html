@@ -186,6 +186,21 @@
     gap: 4px;
   }
   .btn-print-alert:hover { background: #1e4a1e; }
+  .btn-printed {
+    padding: 8px 14px;
+    background: #3a5a8a;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .btn-printed:hover { background: #2a4a7a; }
   @media (max-width: 480px) {
     body { padding: 0 0 40px; }
     #app { border-radius: 0; border-left: none; border-right: none; }
@@ -227,6 +242,7 @@
         <div class="oshinagaki-alert-time" id="oshinagaki-confirmed-time"></div>
       </div>
       <a class="btn-print-alert" href="tools/oshinagaki/obandbook_print_v88.html" target="_blank">🖨 印刷する</a>
+      <button class="btn-printed" id="btnPrinted" onclick="markPrinted()">✅ 印刷完了</button>
     </div>
   </div>
 
@@ -478,6 +494,8 @@
       if (!res.ok) return;
       const data = await res.json();
       if (data && data.status === 'confirmed' && data.confirmed_at) {
+        // 印刷済みの場合はカードを非表示
+        if (data.printed_at) return;
         const t = new Date(data.confirmed_at);
         const hm = t.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
         document.getElementById('oshinagaki-confirmed-time').textContent = hm + ' に確定されました。印刷を開始してください。';
@@ -487,6 +505,30 @@
       // 取得失敗時は非表示のまま
     }
   })();
+
+  // 印刷完了ボタン
+  window.markPrinted = function() {
+    if (!confirm('印刷完了としてよいですか？')) return;
+    (async function() {
+      try {
+        const today2 = new Date();
+        const dk = today2.getFullYear() + '-'
+          + String(today2.getMonth()+1).padStart(2,'0') + '-'
+          + String(today2.getDate()).padStart(2,'0');
+        const DB_URL = 'https://geroyado-oshinagaki-default-rtdb.asia-southeast1.firebasedatabase.app';
+        const res = await fetch(`${DB_URL}/daily/${dk}/printed_at.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(new Date().toISOString())
+        });
+        if (res.ok) {
+          document.getElementById('oshinagaki-alert').style.display = 'none';
+        }
+      } catch(e) {
+        console.warn('印刷完了の保存に失敗:', e);
+      }
+    })();
+  };
 
   // 稼働率キャプション：GitHubのJSONから取得
   (async function() {
