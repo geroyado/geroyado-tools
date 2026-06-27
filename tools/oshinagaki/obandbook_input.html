@@ -462,6 +462,10 @@ function renderForm(course) {
         if (key === 'label') {
           input.placeholder = genre.name;  // デフォルトラベルをプレースホルダーに
         }
+        if (key === 'detail1' || key === 'detail2') {
+          input.maxLength = 18;
+          input.title = '最大18文字まで入力できます';
+        }
         input.dataset.genre = genre.key;
         input.dataset.field = key;
         input.addEventListener('input', onFieldInput);
