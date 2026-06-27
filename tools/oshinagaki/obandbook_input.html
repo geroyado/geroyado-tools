@@ -429,7 +429,7 @@ function renderForm(course) {
     body.className = 'genre-body';
 
     if (genre.isRaku) {
-      // 楽盛り（rakumori_a: 0-4, rakumori_b: 5-7）
+      // 楽盛り（rakumori_a: 0-4, rakumori_b: 5-8）
       const raA = (memData.courses[currentCourse]['rakumori_a'] || {}).items || [];
       const raB = (memData.courses[currentCourse]['rakumori_b'] || {}).items || [];
       const items = [...raA, ...raB].concat(Array(genre.rakulen).fill('')).slice(0, genre.rakulen);
