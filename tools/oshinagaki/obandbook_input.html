@@ -46,6 +46,8 @@
   .btn-confirm { background: #2d6a2d; color: #fff; font-size: 14px; padding: 10px 24px; margin-left: auto; }
   .btn-confirm:hover { background: #1e4a1e; }
   .btn-confirm:disabled { background: #999; cursor: not-allowed; }
+  .btn-reopen { background: #7a5c00; color: #fff; font-size: 13px; padding: 8px 16px; margin-left: 8px; }
+  .btn-reopen:hover { background: #5a4200; }
 
 
   /* グループタブ（通常／連泊） */
@@ -189,6 +191,7 @@
     <button class="btn btn-copy" onclick="confirmCopyAll()">📋 全項目を下位コースにコピー</button>
     <button class="btn btn-save" onclick="saveData()">💾 一時保存</button>
     <button class="btn btn-confirm" id="btnConfirm" onclick="confirmAll()">✅ 全ての献立を確定する</button>
+    <button class="btn btn-reopen" id="btnReopen" onclick="reopenAll()" style="display:none;">✏️ 確定を解除して編集する</button>
   </div>
 
   <!-- グループタブ（通常／連泊） -->
@@ -301,19 +304,22 @@ onValue(dataRef, (snap) => {
 function updateStatusBadge() {
   const badge = document.getElementById('statusBadge');
   const btn   = document.getElementById('btnConfirm');
+  const reopenBtn = document.getElementById('btnReopen');
   if (isConfirmed) {
     const confirmedAt = memData.confirmed_at
       ? new Date(memData.confirmed_at).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})
       : '';
     badge.textContent = '確定済み' + (confirmedAt ? '　' + confirmedAt + '確定' : '');
     badge.className = 'status-badge badge-confirmed';
-    btn.textContent = '✅ 確定済み';
-    btn.disabled = true;
+    btn.textContent = '✅ 再確定する';
+    btn.disabled = false;
+    if (reopenBtn) reopenBtn.style.display = '';
   } else {
     badge.textContent = '未確定';
     badge.className = 'status-badge badge-draft';
     btn.textContent = '✅ 全ての献立を確定する';
     btn.disabled = false;
+    if (reopenBtn) reopenBtn.style.display = 'none';
   }
 }
 
@@ -491,16 +497,35 @@ window.saveData = async function() {
 
 // 確定
 window.confirmAll = function() {
+  const isReconfirm = isConfirmed;
   showDialog(
-    '献立を確定しますか？',
-    '確定するとフロントが印刷可能になります。\nあとから変更する場合は再度確定が必要です。',
+    isReconfirm ? '献立を再確定しますか？' : '献立を確定しますか？',
+    isReconfirm
+      ? '確定時刻が更新され、フロントに通知されます。'
+      : '確定するとフロントが印刷可能になります。\nあとから変更する場合は再確定してください。',
     async () => {
       memData.status = 'confirmed';
       memData.confirmed_at = new Date().toISOString();
       await set(ref(db, `daily/${dateKey}`), memData);
       isConfirmed = true;
       updateStatusBadge();
-      showToast('✅ 献立を確定しました');
+      showToast(isReconfirm ? '✅ 再確定しました' : '✅ 献立を確定しました');
+    }
+  );
+};
+
+// 確定解除
+window.reopenAll = function() {
+  showDialog(
+    '確定を解除しますか？',
+    '未確定状態に戻します。フロントへの通知も解除されます。\n編集後に再度確定してください。',
+    async () => {
+      memData.status = 'draft';
+      memData.confirmed_at = null;
+      await set(ref(db, `daily/${dateKey}`), memData);
+      isConfirmed = false;
+      updateStatusBadge();
+      showToast('✏️ 確定を解除しました');
     }
   );
 };
