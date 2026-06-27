@@ -123,6 +123,9 @@
     border-radius: 4px; font-size: 14px; font-family: inherit;
     background: #fafafa;
   }
+  .field-input:disabled {
+    background: #f0ede8; color: #888; cursor: not-allowed;
+  }
   .field-input:focus {
     outline: none; border-color: #8b7355;
     background: #fff; box-shadow: 0 0 0 2px rgba(139,115,85,0.15);
@@ -346,6 +349,10 @@ function updateStatusBadge() {
     btn.textContent = '✅ 全ての献立を確定する';
     btn.style.display = 'none';
     if (reopenBtn) reopenBtn.style.display = '';
+    // 全フィールドを無効化
+    document.querySelectorAll('.field-input').forEach(el => { el.disabled = true; });
+    document.querySelectorAll('.raku-input').forEach(el => { el.disabled = true; });
+    document.querySelectorAll('.btn-copy-small, .btn-delete-genre, .btn-copy, .btn-save').forEach(el => { el.disabled = true; });
     const printedBadge = document.getElementById('badgePrinted');
     if (printedBadge) {
       if (memData.printed_at) {
@@ -363,6 +370,10 @@ function updateStatusBadge() {
     btn.style.display = '';
     btn.disabled = false;
     if (reopenBtn) reopenBtn.style.display = 'none';
+    // 全フィールドを有効化
+    document.querySelectorAll('.field-input').forEach(el => { el.disabled = false; });
+    document.querySelectorAll('.raku-input').forEach(el => { el.disabled = false; });
+    document.querySelectorAll('.btn-copy-small, .btn-delete-genre, .btn-copy, .btn-save').forEach(el => { el.disabled = false; });
     const printedBadge2 = document.getElementById('badgePrinted');
     if (printedBadge2) printedBadge2.style.display = 'none';
   }
