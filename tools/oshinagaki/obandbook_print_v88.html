@@ -61,7 +61,7 @@
   .col-dish-a    { width: 5mm; }
   .col-dish-b    { width: 8mm; }
   .col-det       { width: 4mm; }
-  .col-raku-item { width: 4.5mm; }
+  .col-raku-item { width: 4mm; }
 
   .inner-table {
     width: 297mm; height: 105mm;
@@ -354,6 +354,7 @@
             <td class="col-rpad content-cell" id="col-yakimono-rp"></td>
             <!-- 楽盛り -->
             <td class="col-lpad content-cell" id="col-rakumori-lp"></td>
+            <td class="col-raku-item content-cell" id="col-raku-9"><div class="content-inner"><span class="det" id="d-raku-9"></span></div></td>
             <td class="col-raku-item content-cell" id="col-raku-8"><div class="content-inner"><span class="det" id="d-raku-8"></span></div></td>
             <td class="col-raku-item content-cell" id="col-raku-7"><div class="content-inner"><span class="det" id="d-raku-7"></span></div></td>
             <td class="col-raku-item content-cell" id="col-raku-6"><div class="content-inner"><span class="det" id="d-raku-6"></span></div></td>
@@ -480,7 +481,7 @@ function applyData(course, data) {
     if (rakuEmpty) el.classList.add('hidden-empty');
     else el.classList.remove('hidden-empty');
   });
-  for (let i = 1; i <= 8; i++) {
+  for (let i = 1; i <= 9; i++) {
     const el1 = document.getElementById(`col-raku-${i}`);
     const el2 = document.getElementById(`label-raku-${i}`);
     if (rakuEmpty) {
@@ -547,7 +548,7 @@ const hiddenByCourse = {
 function switchCourse(course) {
   ['kuchidori','tomewan','konomono','shokuji'].forEach(k => getIds(k,true).forEach(id => document.getElementById(id)?.classList.remove('hidden')));
   ['shizakana','hida','futamono','yakimono','tsukuri','wankawari','sakizuke'].forEach(k => getIds(k,true).forEach(id => document.getElementById(id)?.classList.remove('hidden')));
-  for(let i=1;i<=8;i++) [`col-raku-${i}`,`label-raku-${i}`].forEach(id => document.getElementById(id)?.classList.remove('hidden'));
+  for(let i=1;i<=9;i++) [`col-raku-${i}`,`label-raku-${i}`].forEach(id => document.getElementById(id)?.classList.remove('hidden'));
   ['col-rakumori-lp','col-rakumori-rp','label-rakumori-lp','label-rakumori-rp'].forEach(id => document.getElementById(id)?.classList.remove('hidden'));
 
   (hiddenByCourse[course] || []).forEach(id => document.getElementById(id)?.classList.add('hidden'));
