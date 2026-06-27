@@ -170,10 +170,18 @@
 <div class="no-print">
   <label>コース：</label>
   <select id="courseSelect" onchange="switchCourse(this.value)">
-    <option value="yuki">雪コース</option>
-    <option value="tsuki">月コース</option>
-    <option value="hana">花コース</option>
-    <option value="hida">飛騨牛コース</option>
+    <optgroup label="通常">
+      <option value="yuki">雪コース</option>
+      <option value="tsuki">月コース</option>
+      <option value="hana">花コース</option>
+      <option value="hida">飛騨牛コース</option>
+    </optgroup>
+    <optgroup label="連泊（2日目）">
+      <option value="yuki_2">雪コース【連泊】</option>
+      <option value="tsuki_2">月コース【連泊】</option>
+      <option value="hana_2">花コース【連泊】</option>
+      <option value="hida_2">飛騨牛コース【連泊】</option>
+    </optgroup>
   </select>
   <span id="statusBadge" class="status-badge status-loading">読込中…</span>
   <button class="btn-print" onclick="window.print()">🖨 印刷</button>
@@ -520,7 +528,7 @@ window.addEventListener('load', updateDivider);
 </script>
 
 <script>
-const courseNames = { yuki:'雪コース', tsuki:'月コース', hana:'花コース', hida:'飛騨牛コース' };
+const courseNames = { yuki:'雪コース', tsuki:'月コース', hana:'花コース', hida:'飛騨牛コース', yuki_2:'雪コース【連泊】', tsuki_2:'月コース【連泊】', hana_2:'花コース【連泊】', hida_2:'飛騨牛コース【連泊】' };
 
 function getIds(key, hasDetail) {
   const base = [`col-${key}`,`col-${key}-lp`,`col-${key}-rp`,
