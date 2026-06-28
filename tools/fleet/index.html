@@ -758,8 +758,8 @@ window.saveOil = async function() {
     await addLog(vId, 'oil', data);
     showToast(`保存しました — 次回 ${nextOdo.toLocaleString()} ${v?.unit||'km'}`);
   }
-  if (db) await updateDoc(doc(db, 'vehicles', vId), { oilNextOdo: nextOdo, filterChanged, ...(odo > (v?.currentOdo||0) ? {currentOdo: odo} : {}) });
-  else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].oilNextOdo = nextOdo; vehicles[idx].filterChanged = filterChanged; if (odo > (v?.currentOdo||0)) vehicles[idx].currentOdo = odo; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
+  if (db) await updateDoc(doc(db, 'vehicles', vId), { oilNextOdo: nextOdo, filterChanged, oilLastDate: data.date, ...(odo > (v?.currentOdo||0) ? {currentOdo: odo} : {}) });
+  else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].oilNextOdo = nextOdo; vehicles[idx].filterChanged = filterChanged; vehicles[idx].oilLastDate = data.date; if (odo > (v?.currentOdo||0)) vehicles[idx].currentOdo = odo; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
   closeModal('oil');
   await loadVehicles();
   renderHome();
@@ -812,14 +812,39 @@ function getShakenStatus(v) {
 }
 
 function getOilStatus(v) {
-  if (!v.oilNextOdo) return { type: 'muted', label: '未記録', filterAlert: false };
-  const diff = v.oilNextOdo - (v.currentOdo || 0);
-  const unit = v.unit || 'km';
   const filterAlert = v.filterChanged === false;
-  if (diff < 0) return { type: 'danger', label: `交換超過 ${Math.abs(diff).toLocaleString()}${unit}`, filterAlert };
-  if (diff <= 500) return { type: 'danger', label: `残${diff.toLocaleString()}${unit}`, filterAlert };
-  if (diff <= 1500) return { type: 'warn', label: `残${diff.toLocaleString()}${unit}`, filterAlert };
-  return { type: 'ok', label: `残${diff.toLocaleString()}${unit}`, filterAlert };
+  const unit = v.unit || 'km';
+
+  // 距離判定
+  let distType = 'muted';
+  let distLabel = '未記録';
+  if (v.oilNextOdo != null) {
+    const diff = v.oilNextOdo - (v.currentOdo || 0);
+    if (diff < 0) { distType = 'danger'; distLabel = `距離超過 ${Math.abs(diff).toLocaleString()}${unit}`; }
+    else if (diff <= 500) { distType = 'danger'; distLabel = `残${diff.toLocaleString()}${unit}`; }
+    else if (diff <= 1500) { distType = 'warn'; distLabel = `残${diff.toLocaleString()}${unit}`; }
+    else { distType = 'ok'; distLabel = `残${diff.toLocaleString()}${unit}`; }
+  }
+
+  // 期間判定（前回交換日から）
+  let timeType = 'muted';
+  let timeLabel = '';
+  if (v.oilLastDate) {
+    const last = new Date(v.oilLastDate);
+    const now = new Date();
+    const daysPassed = Math.floor((now - last) / 86400000);
+    const monthsPassed = Math.floor(daysPassed / 30);
+    if (daysPassed > 210) { timeType = 'danger'; timeLabel = `${monthsPassed}ヶ月経過`; }
+    else if (daysPassed > 150) { timeType = 'warn'; timeLabel = `${monthsPassed}ヶ月経過`; }
+    else { timeType = 'ok'; timeLabel = `${monthsPassed}ヶ月経過`; }
+  }
+
+  // 厳しい方を採用
+  const rank = { danger: 2, warn: 1, ok: 0, muted: -1 };
+  if (distType === 'muted' && timeType === 'muted') return { type: 'muted', label: '未記録', timeLabel: '', filterAlert };
+  const type = rank[distType] >= rank[timeType] ? distType : timeType;
+  const label = distType !== 'muted' ? distLabel : '';
+  return { type, label, timeLabel, filterAlert };
 }
 
 // ───────────────────────────────────────
@@ -839,7 +864,8 @@ function renderAlerts() {
     }
     const oil = getOilStatus(v);
     if (oil.type === 'danger' || oil.type === 'warn') {
-      alerts.push({ type: oil.type, text: `${v.name} — オイル交換`, sub: oil.label });
+      const sub = [oil.label, oil.timeLabel].filter(Boolean).join(' / ');
+      alerts.push({ type: oil.type, text: `${v.name} — オイル交換`, sub });
     }
     if (oil.filterAlert) {
       alerts.push({ type: 'warn', text: `${v.name} — 要フィルター交換`, sub: '前回フィルター未交換' });
@@ -884,7 +910,7 @@ function renderVehicleList() {
       </div>
       <div class="vehicle-badges">
         <span class="badge badge-${shaken.type}">🔍 ${shaken.label}</span>
-        <span class="badge badge-${oil.type}">🔧 ${oil.label}</span>
+        <span class="badge badge-${oil.type}">🔧 ${oil.label}${oil.timeLabel ? ' / '+oil.timeLabel : ''}</span>
         ${oil.filterAlert ? '<span class="badge badge-warn">🔩 要フィルター交換</span>' : ''}
       </div>
     </div>`;
@@ -942,8 +968,9 @@ async function renderDetail() {
           <div class="stat-label">車検 ${v.shakenExpiry||'—'}</div>
         </div>
         <div class="stat-card">
-          <div class="stat-val" style="color:var(--c-${oil.type==='ok'?'success':oil.type==='warn'?'warning':'danger'})">${oil.label}</div>
+          <div class="stat-val" style="color:var(--c-${oil.type==='ok'?'success':oil.type==='warn'?'warning':'danger'})">${oil.label||'—'}</div>
           <div class="stat-label">次回オイル ${v.oilNextOdo ? v.oilNextOdo.toLocaleString()+unit : '—'}</div>
+          ${oil.timeLabel ? `<div style="font-size:11px; color:var(--c-${oil.type==='ok'?'muted':oil.type==='warn'?'warning':'danger'}); margin-top:2px;">前回交換 ${oil.timeLabel}</div>` : ''}
           ${oil.filterAlert ? '<div style="font-size:11px; color:var(--c-warning); margin-top:3px; font-weight:500;">🔩 要フィルター交換</div>' : ''}
         </div>
       </div>
