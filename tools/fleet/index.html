@@ -587,7 +587,7 @@ window.editVehicle = function(id) {
   avUnit = v.unit || 'km';
   setAvUnit(avUnit);
   document.getElementById('addVehicleTitle').textContent = '車両を編集';
-  openModal('addVehicle');
+  document.getElementById('modal-addVehicle').classList.add('open');
 };
 
 window.deleteVehicle = async function(id) {
