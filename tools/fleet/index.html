@@ -728,8 +728,11 @@ window.saveRefuel = async function() {
     showToast(efficiency ? `保存しました — 燃費 ${efficiency} ${v?.unit||'km'}/L` : '保存しました');
   }
   if (odo > (v?.currentOdo || 0)) {
-    if (db) await updateDoc(doc(db, 'vehicles', vId), { currentOdo: odo });
-    else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].currentOdo = odo; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
+    if (db) await updateDoc(doc(db, 'vehicles', vId), { currentOdo: odo, lastRefuelDate: date });
+    else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].currentOdo = odo; vehicles[idx].lastRefuelDate = date; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
+  } else {
+    if (db) await updateDoc(doc(db, 'vehicles', vId), { lastRefuelDate: date });
+    else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].lastRefuelDate = date; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
   }
   closeModal('refuel');
   await loadVehicles();
@@ -847,8 +850,18 @@ function getOilStatus(v) {
   return { type, label, timeLabel, filterAlert };
 }
 
-// ───────────────────────────────────────
-// Render: Home
+function getFuelStatus(v) {
+  if (!v.lastRefuelDate) return { type: 'muted', label: '' };
+  const last = new Date(v.lastRefuelDate);
+  const now = new Date();
+  const daysPassed = Math.floor((now - last) / 86400000);
+  const monthsPassed = Math.floor(daysPassed / 30);
+  if (daysPassed > 210) return { type: 'danger', label: `最終給油 ${monthsPassed}ヶ月前` };
+  if (daysPassed > 150) return { type: 'warn', label: `最終給油 ${monthsPassed}ヶ月前` };
+  return { type: 'ok', label: '' };
+}
+
+
 async function renderHome() {
   renderAlerts();
   renderVehicleList();
@@ -866,6 +879,10 @@ function renderAlerts() {
     if (oil.type === 'danger' || oil.type === 'warn') {
       const sub = [oil.label, oil.timeLabel].filter(Boolean).join(' / ');
       alerts.push({ type: oil.type, text: `${v.name} — オイル交換`, sub });
+    }
+    const fuel = getFuelStatus(v);
+    if (fuel.type === 'danger' || fuel.type === 'warn') {
+      alerts.push({ type: fuel.type, text: `${v.name} — ガソリン劣化注意`, sub: fuel.label });
     }
     if (oil.filterAlert) {
       alerts.push({ type: 'warn', text: `${v.name} — 要フィルター交換`, sub: '前回フィルター未交換' });
@@ -895,6 +912,7 @@ function renderVehicleList() {
   el.innerHTML = vehicles.map(v => {
     const shaken = getShakenStatus(v);
     const oil = getOilStatus(v);
+    const fuel = getFuelStatus(v);
     const unit = v.unit || 'km';
     return `
     <div class="vehicle-card" onclick="showDetail('${v.id}')">
@@ -912,6 +930,7 @@ function renderVehicleList() {
         <span class="badge badge-${shaken.type}">🔍 ${shaken.label}</span>
         <span class="badge badge-${oil.type}">🔧 ${oil.label}${oil.timeLabel ? ' / '+oil.timeLabel : ''}</span>
         ${oil.filterAlert ? '<span class="badge badge-warn">🔩 要フィルター交換</span>' : ''}
+        ${fuel.type !== 'ok' && fuel.type !== 'muted' ? `<span class="badge badge-${fuel.type}">⛽ ${fuel.label}</span>` : ''}
       </div>
     </div>`;
   }).join('');
