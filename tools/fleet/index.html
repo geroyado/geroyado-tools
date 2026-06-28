@@ -411,6 +411,17 @@
       </div>
     </div>
     <div class="form-group">
+      <label class="form-label">フィルター交換</label>
+      <div style="display:flex; gap:10px;">
+        <label style="display:flex; align-items:center; gap:6px; font-size:15px; cursor:pointer;">
+          <input type="radio" name="oil-filter" id="oil-filter-yes" value="yes" checked style="width:18px;height:18px;"> あり
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; font-size:15px; cursor:pointer;">
+          <input type="radio" name="oil-filter" id="oil-filter-no" value="no" style="width:18px;height:18px;"> なし
+        </label>
+      </div>
+    </div>
+    <div class="form-group">
       <label class="form-label">メモ</label>
       <input class="form-input" type="text" id="oil-memo" placeholder="例: 0W-20 4L">
     </div>
@@ -725,11 +736,12 @@ window.saveOil = async function() {
   const nextKm = parseInt(document.getElementById('oil-next').value) || 5000;
   const cost = parseInt(document.getElementById('oil-cost').value) || 0;
   const date = document.getElementById('oil-date').value;
+  const filterChanged = document.querySelector('input[name="oil-filter"]:checked')?.value === 'yes';
   if (!vId || !date || !odo) { showToast('車両・日付・ODOは必須です'); return; }
 
   const v = vehicles.find(x => x.id === vId);
   const nextOdo = odo + nextKm;
-  const data = { date, odo, nextOdo, nextKm, cost, memo: document.getElementById('oil-memo').value.trim(), unit: v?.unit || 'km' };
+  const data = { date, odo, nextOdo, nextKm, cost, filterChanged, memo: document.getElementById('oil-memo').value.trim(), unit: v?.unit || 'km' };
 
   if (logId) {
     await updateLog(vId, 'oil', logId, data);
@@ -738,8 +750,8 @@ window.saveOil = async function() {
     await addLog(vId, 'oil', data);
     showToast(`保存しました — 次回 ${nextOdo.toLocaleString()} ${v?.unit||'km'}`);
   }
-  if (db) await updateDoc(doc(db, 'vehicles', vId), { oilNextOdo: nextOdo, ...(odo > (v?.currentOdo||0) ? {currentOdo: odo} : {}) });
-  else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].oilNextOdo = nextOdo; if (odo > (v?.currentOdo||0)) vehicles[idx].currentOdo = odo; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
+  if (db) await updateDoc(doc(db, 'vehicles', vId), { oilNextOdo: nextOdo, filterChanged, ...(odo > (v?.currentOdo||0) ? {currentOdo: odo} : {}) });
+  else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].oilNextOdo = nextOdo; vehicles[idx].filterChanged = filterChanged; if (odo > (v?.currentOdo||0)) vehicles[idx].currentOdo = odo; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
   closeModal('oil');
   await loadVehicles();
   renderHome();
@@ -792,13 +804,14 @@ function getShakenStatus(v) {
 }
 
 function getOilStatus(v) {
-  if (!v.oilNextOdo) return { type: 'muted', label: '未記録' };
+  if (!v.oilNextOdo) return { type: 'muted', label: '未記録', filterAlert: false };
   const diff = v.oilNextOdo - (v.currentOdo || 0);
   const unit = v.unit || 'km';
-  if (diff < 0) return { type: 'danger', label: `交換超過 ${Math.abs(diff).toLocaleString()}${unit}` };
-  if (diff <= 500) return { type: 'danger', label: `残${diff.toLocaleString()}${unit}` };
-  if (diff <= 1500) return { type: 'warn', label: `残${diff.toLocaleString()}${unit}` };
-  return { type: 'ok', label: `残${diff.toLocaleString()}${unit}` };
+  const filterAlert = v.filterChanged === false;
+  if (diff < 0) return { type: 'danger', label: `交換超過 ${Math.abs(diff).toLocaleString()}${unit}`, filterAlert };
+  if (diff <= 500) return { type: 'danger', label: `残${diff.toLocaleString()}${unit}`, filterAlert };
+  if (diff <= 1500) return { type: 'warn', label: `残${diff.toLocaleString()}${unit}`, filterAlert };
+  return { type: 'ok', label: `残${diff.toLocaleString()}${unit}`, filterAlert };
 }
 
 // ───────────────────────────────────────
@@ -819,6 +832,9 @@ function renderAlerts() {
     const oil = getOilStatus(v);
     if (oil.type === 'danger' || oil.type === 'warn') {
       alerts.push({ type: oil.type, text: `${v.name} — オイル交換`, sub: oil.label });
+    }
+    if (oil.filterAlert) {
+      alerts.push({ type: 'warn', text: `${v.name} — 要フィルター交換`, sub: '前回フィルター未交換' });
     }
   });
   if (alerts.length === 0) {
@@ -861,6 +877,7 @@ function renderVehicleList() {
       <div class="vehicle-badges">
         <span class="badge badge-${shaken.type}">🔍 ${shaken.label}</span>
         <span class="badge badge-${oil.type}">🔧 ${oil.label}</span>
+        ${oil.filterAlert ? '<span class="badge badge-warn">🔩 要フィルター交換</span>' : ''}
       </div>
     </div>`;
   }).join('');
@@ -919,6 +936,7 @@ async function renderDetail() {
         <div class="stat-card">
           <div class="stat-val" style="color:var(--c-${oil.type==='ok'?'success':oil.type==='warn'?'warning':'danger'})">${oil.label}</div>
           <div class="stat-label">次回オイル ${v.oilNextOdo ? v.oilNextOdo.toLocaleString()+unit : '—'}</div>
+          ${oil.filterAlert ? '<div style="font-size:11px; color:var(--c-warning); margin-top:3px; font-weight:500;">🔩 要フィルター交換</div>' : ''}
         </div>
       </div>
     </div>
@@ -1096,6 +1114,7 @@ window.openModal = function(name) {
     document.getElementById('oil-odo').value = '';
     document.getElementById('oil-next').value = '5000';
     document.getElementById('oil-cost').value = '';
+    document.getElementById('oil-filter-yes').checked = true;
     populateVehicleSelect('oil-vehicle', 'oil-unit-label', 'oil-unit-label2');
   }
   if (name === 'shaken') {
@@ -1147,6 +1166,8 @@ window.editLog = async function(type, vehicleId, logId) {
     document.getElementById('oil-next').value = l.nextKm || 5000;
     document.getElementById('oil-cost').value = l.cost || '';
     document.getElementById('oil-memo').value = l.memo || '';
+    document.getElementById('oil-filter-yes').checked = l.filterChanged !== false;
+    document.getElementById('oil-filter-no').checked = l.filterChanged === false;
     populateVehicleSelect('oil-vehicle', 'oil-unit-label', 'oil-unit-label2');
     document.getElementById('oil-vehicle').value = vehicleId;
     document.getElementById('modal-oil').classList.add('open');
