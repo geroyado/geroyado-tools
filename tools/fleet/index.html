@@ -339,7 +339,8 @@
 <div class="modal-overlay" id="modal-refuel">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="modal-title">⛽ 給油記録</div>
+    <div class="modal-title" id="rf-title">⛽ 給油記録</div>
+    <input type="hidden" id="rf-id">
     <div class="form-group">
       <label class="form-label">車両</label>
       <div class="form-select-wrap">
@@ -372,6 +373,7 @@
     </div>
     <button class="btn btn-primary" onclick="saveRefuel()">保存</button>
     <button class="btn btn-secondary" style="margin-top:8px;" onclick="closeModal('refuel')">キャンセル</button>
+    <button class="btn btn-danger" id="rf-delete-btn" style="margin-top:8px; display:none;" onclick="deleteLog('refuel')">この記録を削除</button>
   </div>
 </div>
 
@@ -379,7 +381,8 @@
 <div class="modal-overlay" id="modal-oil">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="modal-title">🔧 オイル交換記録</div>
+    <div class="modal-title" id="oil-title">🔧 オイル交換記録</div>
+    <input type="hidden" id="oil-id">
     <div class="form-group">
       <label class="form-label">車両</label>
       <div class="form-select-wrap">
@@ -413,6 +416,7 @@
     </div>
     <button class="btn btn-primary" onclick="saveOil()">保存</button>
     <button class="btn btn-secondary" style="margin-top:8px;" onclick="closeModal('oil')">キャンセル</button>
+    <button class="btn btn-danger" id="oil-delete-btn" style="margin-top:8px; display:none;" onclick="deleteLog('oil')">この記録を削除</button>
   </div>
 </div>
 
@@ -420,7 +424,8 @@
 <div class="modal-overlay" id="modal-shaken">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="modal-title">📋 車検更新</div>
+    <div class="modal-title" id="sk-title">📋 車検更新</div>
+    <input type="hidden" id="sk-id">
     <div class="form-group">
       <label class="form-label">車両</label>
       <div class="form-select-wrap">
@@ -443,6 +448,7 @@
     </div>
     <button class="btn btn-primary" onclick="saveShaken()">保存</button>
     <button class="btn btn-secondary" style="margin-top:8px;" onclick="closeModal('shaken')">キャンセル</button>
+    <button class="btn btn-danger" id="sk-delete-btn" style="margin-top:8px; display:none;" onclick="deleteLog('shaken')">この記録を削除</button>
   </div>
 </div>
 
@@ -629,6 +635,39 @@ async function addLog(vehicleId, type, data) {
   return ref.id;
 }
 
+async function updateLog(vehicleId, type, logId, data) {
+  if (!db) {
+    const key = `fleetLogs_${vehicleId}_${type}`;
+    const arr = JSON.parse(localStorage.getItem(key) || '[]');
+    const idx = arr.findIndex(l => l.id === logId);
+    if (idx >= 0) arr[idx] = { ...arr[idx], ...data };
+    localStorage.setItem(key, JSON.stringify(arr));
+    return;
+  }
+  await updateDoc(doc(db, 'vehicles', vehicleId, type, logId), data);
+}
+
+window.deleteLog = async function(type) {
+  if (!confirm('この記録を削除しますか？')) return;
+  const idMap = { refuel: 'rf', oil: 'oil', shaken: 'sk' };
+  const prefix = idMap[type];
+  const logId = document.getElementById(prefix+'-id').value;
+  const vId = document.getElementById(prefix+'-vehicle').value;
+  if (!logId || !vId) return;
+  if (db) {
+    await deleteDoc(doc(db, 'vehicles', vId, type, logId));
+  } else {
+    const key = `fleetLogs_${vId}_${type}`;
+    const arr = JSON.parse(localStorage.getItem(key) || '[]').filter(l => l.id !== logId);
+    localStorage.setItem(key, JSON.stringify(arr));
+  }
+  closeModal(type);
+  showToast('削除しました');
+  await renderDetail();
+  await loadVehicles();
+  renderHome();
+};
+
 async function getAllRecentLogs(limitN = 20) {
   const all = [];
   for (const v of vehicles) {
@@ -644,6 +683,7 @@ async function getAllRecentLogs(limitN = 20) {
 // Save records
 window.saveRefuel = async function() {
   const vId = document.getElementById('rf-vehicle').value;
+  const logId = document.getElementById('rf-id').value;
   const odo = parseInt(document.getElementById('rf-odo').value);
   const liters = parseFloat(document.getElementById('rf-liters').value);
   const price = parseInt(document.getElementById('rf-price').value) || 0;
@@ -651,32 +691,36 @@ window.saveRefuel = async function() {
   if (!vId || !date || !odo || !liters) { showToast('車両・日付・ODO・給油量は必須です'); return; }
 
   const v = vehicles.find(x => x.id === vId);
-  // Calc fuel efficiency from previous log
-  const prevLogs = await getLogs(vId, 'refuel', 2);
+  const prevLogs = await getLogs(vId, 'refuel', 10);
   let efficiency = null;
-  if (prevLogs.length >= 1) {
-    const prev = prevLogs[0];
-    const diff = odo - prev.odo;
-    if (diff > 0 && liters > 0) efficiency = parseFloat((diff / liters).toFixed(1));
+  const others = prevLogs.filter(l => l.id !== logId);
+  if (others.length >= 1) {
+    const prev = others.find(l => l.odo < odo);
+    if (prev) { const diff = odo - prev.odo; if (diff > 0 && liters > 0) efficiency = parseFloat((diff / liters).toFixed(1)); }
   }
 
-  await addLog(vId, 'refuel', {
-    date, odo, liters, price, memo: document.getElementById('rf-memo').value.trim(),
-    efficiency, unit: v?.unit || 'km'
-  });
-  // Update vehicle ODO
+  const data = { date, odo, liters, price, memo: document.getElementById('rf-memo').value.trim(), efficiency, unit: v?.unit || 'km' };
+
+  if (logId) {
+    await updateLog(vId, 'refuel', logId, data);
+    showToast('更新しました');
+  } else {
+    await addLog(vId, 'refuel', data);
+    showToast(efficiency ? `保存しました — 燃費 ${efficiency} ${v?.unit||'km'}/L` : '保存しました');
+  }
   if (odo > (v?.currentOdo || 0)) {
     if (db) await updateDoc(doc(db, 'vehicles', vId), { currentOdo: odo });
     else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].currentOdo = odo; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
   }
   closeModal('refuel');
-  showToast(efficiency ? `保存しました — 燃費 ${efficiency} ${v?.unit||'km'}/L` : '保存しました');
   await loadVehicles();
   renderHome();
+  if (currentVehicleId === vId) await renderDetail();
 };
 
 window.saveOil = async function() {
   const vId = document.getElementById('oil-vehicle').value;
+  const logId = document.getElementById('oil-id').value;
   const odo = parseInt(document.getElementById('oil-odo').value);
   const nextKm = parseInt(document.getElementById('oil-next').value) || 5000;
   const cost = parseInt(document.getElementById('oil-cost').value) || 0;
@@ -685,40 +729,47 @@ window.saveOil = async function() {
 
   const v = vehicles.find(x => x.id === vId);
   const nextOdo = odo + nextKm;
+  const data = { date, odo, nextOdo, nextKm, cost, memo: document.getElementById('oil-memo').value.trim(), unit: v?.unit || 'km' };
 
-  await addLog(vId, 'oil', {
-    date, odo, nextOdo, nextKm, cost, memo: document.getElementById('oil-memo').value.trim(),
-    unit: v?.unit || 'km'
-  });
-  if (odo > (v?.currentOdo || 0)) {
-    if (db) await updateDoc(doc(db, 'vehicles', vId), { currentOdo: odo, oilNextOdo: nextOdo });
-    else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].currentOdo = odo; vehicles[idx].oilNextOdo = nextOdo; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
+  if (logId) {
+    await updateLog(vId, 'oil', logId, data);
+    showToast('更新しました');
   } else {
-    if (db) await updateDoc(doc(db, 'vehicles', vId), { oilNextOdo: nextOdo });
-    else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].oilNextOdo = nextOdo; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
+    await addLog(vId, 'oil', data);
+    showToast(`保存しました — 次回 ${nextOdo.toLocaleString()} ${v?.unit||'km'}`);
   }
+  if (db) await updateDoc(doc(db, 'vehicles', vId), { oilNextOdo: nextOdo, ...(odo > (v?.currentOdo||0) ? {currentOdo: odo} : {}) });
+  else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].oilNextOdo = nextOdo; if (odo > (v?.currentOdo||0)) vehicles[idx].currentOdo = odo; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
   closeModal('oil');
-  showToast(`保存しました — 次回 ${nextOdo.toLocaleString()} ${v?.unit||'km'}`)
   await loadVehicles();
   renderHome();
+  if (currentVehicleId === vId) await renderDetail();
 };
 
 window.saveShaken = async function() {
   const vId = document.getElementById('sk-vehicle').value;
+  const logId = document.getElementById('sk-id').value;
   const expiry = document.getElementById('sk-expiry').value;
   const cost = parseInt(document.getElementById('sk-cost').value) || 0;
   if (!vId || !expiry) { showToast('車両・有効期限は必須です'); return; }
 
-  await addLog(vId, 'shaken', {
-    date: new Date().toISOString().slice(0,10),
-    expiry, cost, memo: document.getElementById('sk-memo').value.trim()
-  });
+  const data = { date: logId ? undefined : new Date().toISOString().slice(0,10), expiry, cost, memo: document.getElementById('sk-memo').value.trim() };
+  if (!data.date) delete data.date;
+
+  if (logId) {
+    await updateLog(vId, 'shaken', logId, data);
+    showToast('更新しました');
+  } else {
+    data.date = new Date().toISOString().slice(0,10);
+    await addLog(vId, 'shaken', data);
+    showToast('車検を更新しました');
+  }
   if (db) await updateDoc(doc(db, 'vehicles', vId), { shakenExpiry: expiry });
   else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].shakenExpiry = expiry; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
   closeModal('shaken');
-  showToast('車検を更新しました');
   await loadVehicles();
   renderHome();
+  if (currentVehicleId === vId) await renderDetail();
 };
 
 // ───────────────────────────────────────
@@ -889,14 +940,15 @@ function renderLogTab(tab, refuelLogs, oilLogs, shakenLogs, unit) {
     if (!refuelLogs.length) return '<div class="empty-state">給油記録がありません</div>';
     return '<div class="card">' + refuelLogs.map(l => `
       <div class="log-item">
-        <div>
+        <div style="flex:1;">
           <div class="log-date">${l.date}</div>
           <div class="log-main">${l.liters}L / ${l.odo.toLocaleString()}${unit}</div>
           <div class="log-sub">${l.memo||''}</div>
         </div>
-        <div class="log-val">
-          ${l.efficiency ? l.efficiency+' '+unit+'/L' : '—'}
-          ${l.price ? '<div style="font-size:11px;color:var(--c-muted);">@'+l.price+'円</div>' : ''}
+        <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+          <div class="log-val">${l.efficiency ? l.efficiency+' '+unit+'/L' : '—'}</div>
+          ${l.price ? `<div style="font-size:11px;color:var(--c-muted);">@${l.price}円</div>` : ''}
+          <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;" onclick="editLog('refuel','${currentVehicleId}','${l.id}')">編集</button>
         </div>
       </div>`).join('') + '</div>';
   }
@@ -904,14 +956,15 @@ function renderLogTab(tab, refuelLogs, oilLogs, shakenLogs, unit) {
     if (!oilLogs.length) return '<div class="empty-state">オイル交換記録がありません</div>';
     return '<div class="card">' + oilLogs.map(l => `
       <div class="log-item">
-        <div>
+        <div style="flex:1;">
           <div class="log-date">${l.date}</div>
           <div class="log-main">${l.odo.toLocaleString()}${unit}で交換</div>
           <div class="log-sub">${l.memo||''}</div>
         </div>
-        <div class="log-val">
-          次回 ${l.nextOdo ? l.nextOdo.toLocaleString()+unit : '—'}
-          ${l.cost ? '<div style="font-size:11px;color:var(--c-muted);">'+l.cost.toLocaleString()+'円</div>' : ''}
+        <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+          <div class="log-val">次回 ${l.nextOdo ? l.nextOdo.toLocaleString()+unit : '—'}</div>
+          ${l.cost ? `<div style="font-size:11px;color:var(--c-muted);">${l.cost.toLocaleString()}円</div>` : ''}
+          <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;" onclick="editLog('oil','${currentVehicleId}','${l.id}')">編集</button>
         </div>
       </div>`).join('') + '</div>';
   }
@@ -919,13 +972,14 @@ function renderLogTab(tab, refuelLogs, oilLogs, shakenLogs, unit) {
     if (!shakenLogs.length) return '<div class="empty-state">車検記録がありません</div>';
     return '<div class="card">' + shakenLogs.map(l => `
       <div class="log-item">
-        <div>
+        <div style="flex:1;">
           <div class="log-date">${l.date}</div>
           <div class="log-main">有効期限: ${l.expiry}</div>
           <div class="log-sub">${l.memo||''}</div>
         </div>
-        <div class="log-val">
-          ${l.cost ? l.cost.toLocaleString()+'円' : '—'}
+        <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+          <div class="log-val">${l.cost ? l.cost.toLocaleString()+'円' : '—'}</div>
+          <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;" onclick="editLog('shaken','${currentVehicleId}','${l.id}')">編集</button>
         </div>
       </div>`).join('') + '</div>';
   }
@@ -1023,6 +1077,9 @@ function populateVehicleSelect(selectId, unitLabelId, unitLabelId2) {
 window.openModal = function(name) {
   const today = new Date().toISOString().slice(0,10);
   if (name === 'refuel') {
+    document.getElementById('rf-id').value = '';
+    document.getElementById('rf-title').textContent = '⛽ 給油記録';
+    document.getElementById('rf-delete-btn').style.display = 'none';
     document.getElementById('rf-date').value = today;
     document.getElementById('rf-memo').value = '';
     document.getElementById('rf-liters').value = '';
@@ -1031,6 +1088,9 @@ window.openModal = function(name) {
     populateVehicleSelect('rf-vehicle', 'rf-unit-label');
   }
   if (name === 'oil') {
+    document.getElementById('oil-id').value = '';
+    document.getElementById('oil-title').textContent = '🔧 オイル交換記録';
+    document.getElementById('oil-delete-btn').style.display = 'none';
     document.getElementById('oil-date').value = today;
     document.getElementById('oil-memo').value = '';
     document.getElementById('oil-odo').value = '';
@@ -1039,6 +1099,9 @@ window.openModal = function(name) {
     populateVehicleSelect('oil-vehicle', 'oil-unit-label', 'oil-unit-label2');
   }
   if (name === 'shaken') {
+    document.getElementById('sk-id').value = '';
+    document.getElementById('sk-title').textContent = '📋 車検更新';
+    document.getElementById('sk-delete-btn').style.display = 'none';
     document.getElementById('sk-memo').value = '';
     document.getElementById('sk-cost').value = '';
     document.getElementById('sk-expiry').value = '';
@@ -1055,6 +1118,50 @@ window.openModal = function(name) {
     document.getElementById('addVehicleTitle').textContent = '＋ 車両を追加';
   }
   document.getElementById('modal-'+name).classList.add('open');
+};
+
+window.editLog = async function(type, vehicleId, logId) {
+  const logs = await getLogs(vehicleId, type, 50);
+  const l = logs.find(x => x.id === logId);
+  if (!l) return;
+
+  if (type === 'refuel') {
+    document.getElementById('rf-id').value = logId;
+    document.getElementById('rf-title').textContent = '⛽ 給油記録を編集';
+    document.getElementById('rf-delete-btn').style.display = 'block';
+    document.getElementById('rf-date').value = l.date || '';
+    document.getElementById('rf-odo').value = l.odo || '';
+    document.getElementById('rf-liters').value = l.liters || '';
+    document.getElementById('rf-price').value = l.price || '';
+    document.getElementById('rf-memo').value = l.memo || '';
+    populateVehicleSelect('rf-vehicle', 'rf-unit-label');
+    document.getElementById('rf-vehicle').value = vehicleId;
+    document.getElementById('modal-refuel').classList.add('open');
+  }
+  if (type === 'oil') {
+    document.getElementById('oil-id').value = logId;
+    document.getElementById('oil-title').textContent = '🔧 オイル交換を編集';
+    document.getElementById('oil-delete-btn').style.display = 'block';
+    document.getElementById('oil-date').value = l.date || '';
+    document.getElementById('oil-odo').value = l.odo || '';
+    document.getElementById('oil-next').value = l.nextKm || 5000;
+    document.getElementById('oil-cost').value = l.cost || '';
+    document.getElementById('oil-memo').value = l.memo || '';
+    populateVehicleSelect('oil-vehicle', 'oil-unit-label', 'oil-unit-label2');
+    document.getElementById('oil-vehicle').value = vehicleId;
+    document.getElementById('modal-oil').classList.add('open');
+  }
+  if (type === 'shaken') {
+    document.getElementById('sk-id').value = logId;
+    document.getElementById('sk-title').textContent = '📋 車検記録を編集';
+    document.getElementById('sk-delete-btn').style.display = 'block';
+    document.getElementById('sk-expiry').value = l.expiry || '';
+    document.getElementById('sk-cost').value = l.cost || '';
+    document.getElementById('sk-memo').value = l.memo || '';
+    populateVehicleSelect('sk-vehicle');
+    document.getElementById('sk-vehicle').value = vehicleId;
+    document.getElementById('modal-shaken').classList.add('open');
+  }
 };
 
 window.closeModal = function(name) {
