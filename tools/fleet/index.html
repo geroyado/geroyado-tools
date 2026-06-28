@@ -256,7 +256,6 @@
 <div class="app-header">
   <div>
     <div class="app-header h1">🚗 車両管理</div>
-    <div class="subtitle">下呂観光グループ</div>
   </div>
   <div id="headerAction"></div>
 </div>
@@ -962,15 +961,34 @@ async function renderRecentLogs() {
 function renderVehicleSettings() {
   const el = document.getElementById('vehicleSettingList');
   if (!vehicles.length) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div class="divider"></div>' + vehicles.map(v => `
+  el.innerHTML = '<div class="divider"></div>' + vehicles.map((v, idx) => `
     <div class="config-row">
       <span class="config-label">${v.name}<span style="font-size:11px; color:var(--c-muted); margin-left:6px;">${v.unit||'km'}</span></span>
-      <div style="display:flex; gap:8px;">
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button class="btn btn-secondary btn-sm" style="padding:5px 10px;" onclick="moveVehicle('${v.id}', -1)" ${idx===0?'disabled':''}>↑</button>
+        <button class="btn btn-secondary btn-sm" style="padding:5px 10px;" onclick="moveVehicle('${v.id}', 1)" ${idx===vehicles.length-1?'disabled':''}>↓</button>
         <button class="btn btn-secondary btn-sm" onclick="editVehicle('${v.id}')">編集</button>
         <button class="btn btn-secondary btn-sm" style="color:var(--c-danger);" onclick="deleteVehicle('${v.id}')">削除</button>
       </div>
     </div>`).join('');
 }
+
+window.moveVehicle = async function(id, dir) {
+  const idx = vehicles.findIndex(v => v.id === id);
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= vehicles.length) return;
+  [vehicles[idx], vehicles[newIdx]] = [vehicles[newIdx], vehicles[idx]];
+  // sortOrderを更新
+  for (let i = 0; i < vehicles.length; i++) {
+    vehicles[i].sortOrder = i;
+    if (db) {
+      await updateDoc(doc(db, 'vehicles', vehicles[i].id), { sortOrder: i });
+    }
+  }
+  if (!db) localStorage.setItem('fleetVehicles', JSON.stringify(vehicles));
+  renderVehicleSettings();
+  renderHome();
+};
 
 // ───────────────────────────────────────
 // Navigation
