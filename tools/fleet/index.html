@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>車両管理 — 下呂観光</title>
+<style>
+  :root {
+    --c-bg: #F7F6F2;
+    --c-surface: #FFFFFF;
+    --c-border: #E2E0D8;
+    --c-text: #1A1A18;
+    --c-muted: #888780;
+    --c-accent: #185FA5;
+    --c-accent-bg: #E6F1FB;
+    --c-warning: #BA7517;
+    --c-warning-bg: #FAEEDA;
+    --c-danger: #A32D2D;
+    --c-danger-bg: #FCEBEB;
+    --c-success: #3B6D11;
+    --c-success-bg: #EAF3DE;
+    --radius: 10px;
+    --pad: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+    background: var(--c-bg);
+    color: var(--c-text);
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+  /* Header */
+  .app-header {
+    background: var(--c-surface);
+    border-bottom: 1px solid var(--c-border);
+    padding: 14px var(--pad);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .app-header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+  .app-header .subtitle { font-size: 11px; color: var(--c-muted); }
+  /* Bottom nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--c-surface);
+    border-top: 1px solid var(--c-border);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 8px 4px 10px;
+    border: none; background: none; color: var(--c-muted);
+    font-size: 10px; gap: 3px; cursor: pointer; transition: color .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-btn svg { width: 22px; height: 22px; }
+  .nav-btn.active { color: var(--c-accent); }
+  /* Pages */
+  .page { display: none; padding: var(--pad); }
+  .page.active { display: block; }
+  /* Section title */
+  .section-title {
+    font-size: 12px; font-weight: 600; color: var(--c-muted);
+    text-transform: uppercase; letter-spacing: 0.6px;
+    margin-bottom: 10px; margin-top: 20px;
+  }
+  .section-title:first-child { margin-top: 0; }
+  /* Card */
+  .card {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    padding: 14px var(--pad);
+    margin-bottom: 10px;
+  }
+  /* Vehicle card */
+  .vehicle-card {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    padding: 14px var(--pad);
+    margin-bottom: 10px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color .15s;
+  }
+  .vehicle-card:active { border-color: var(--c-accent); }
+  .vehicle-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .vehicle-name { font-size: 16px; font-weight: 600; }
+  .vehicle-plate {
+    font-size: 12px; color: var(--c-muted);
+    background: var(--c-bg); border-radius: 4px; padding: 2px 7px;
+  }
+  .vehicle-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .badge {
+    font-size: 11px; font-weight: 500;
+    padding: 3px 8px; border-radius: 20px;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .badge-ok { background: var(--c-success-bg); color: var(--c-success); }
+  .badge-warn { background: var(--c-warning-bg); color: var(--c-warning); }
+  .badge-danger { background: var(--c-danger-bg); color: var(--c-danger); }
+  .badge-muted { background: var(--c-bg); color: var(--c-muted); }
+  /* Alert list */
+  .alert-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--c-border);
+  }
+  .alert-item:last-child { border-bottom: none; }
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .alert-dot.danger { background: var(--c-danger); }
+  .alert-dot.warn { background: var(--c-warning); }
+  .alert-text { font-size: 14px; line-height: 1.45; }
+  .alert-sub { font-size: 12px; color: var(--c-muted); margin-top: 1px; }
+  /* Form */
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--c-muted); margin-bottom: 5px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-input, .form-select {
+    width: 100%; padding: 11px 14px;
+    border: 1px solid var(--c-border); border-radius: 8px;
+    font-size: 16px; background: var(--c-surface); color: var(--c-text);
+    -webkit-appearance: none; appearance: none;
+    font-family: inherit;
+  }
+  .form-input:focus, .form-select:focus {
+    outline: none; border-color: var(--c-accent);
+    box-shadow: 0 0 0 3px var(--c-accent-bg);
+  }
+  .form-select-wrap { position: relative; }
+  .form-select-wrap::after {
+    content: '▾'; position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--c-muted); pointer-events: none; font-size: 14px;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-hint { font-size: 12px; color: var(--c-muted); margin-top: 4px; }
+  /* Buttons */
+  .btn {
+    display: block; width: 100%; padding: 13px;
+    border-radius: 8px; border: none; font-size: 15px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: opacity .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { opacity: 0.75; }
+  .btn-primary { background: var(--c-accent); color: #fff; }
+  .btn-secondary { background: var(--c-bg); color: var(--c-text); border: 1px solid var(--c-border); }
+  .btn-danger { background: var(--c-danger-bg); color: var(--c-danger); }
+  .btn-sm {
+    display: inline-block; width: auto; padding: 7px 14px;
+    font-size: 13px; font-weight: 500;
+  }
+  /* Detail page */
+  .detail-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+  }
+  .back-btn {
+    background: none; border: none; padding: 4px 0; cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+    font-size: 14px; color: var(--c-accent); font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .stat-card {
+    background: var(--c-bg); border-radius: 8px; padding: 12px;
+    text-align: center;
+  }
+  .stat-val { font-size: 20px; font-weight: 600; color: var(--c-text); }
+  .stat-label { font-size: 11px; color: var(--c-muted); margin-top: 2px; }
+  /* Log list */
+  .log-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 0; border-bottom: 1px solid var(--c-border);
+  }
+  .log-item:last-child { border-bottom: none; }
+  .log-date { font-size: 12px; color: var(--c-muted); }
+  .log-main { font-size: 14px; font-weight: 500; }
+  .log-sub { font-size: 12px; color: var(--c-muted); }
+  .log-val { font-size: 14px; font-weight: 600; text-align: right; }
+  /* Tab bar */
+  .tab-bar { display: flex; border-bottom: 1px solid var(--c-border); margin-bottom: 16px; }
+  .tab-btn {
+    flex: 1; padding: 10px; border: none; background: none;
+    font-size: 13px; font-weight: 500; color: var(--c-muted);
+    border-bottom: 2px solid transparent; cursor: pointer; font-family: inherit;
+    -webkit-tap-highlight-color: transparent; transition: color .15s;
+  }
+  .tab-btn.active { color: var(--c-accent); border-bottom-color: var(--c-accent); }
+  /* Unit toggle */
+  .unit-toggle { display: flex; gap: 0; }
+  .unit-btn {
+    padding: 8px 16px; border: 1px solid var(--c-border);
+    background: var(--c-bg); font-size: 13px; cursor: pointer;
+    font-family: inherit; color: var(--c-muted);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .unit-btn:first-child { border-radius: 6px 0 0 6px; }
+  .unit-btn:last-child { border-radius: 0 6px 6px 0; border-left: none; }
+  .unit-btn.active { background: var(--c-accent); color: #fff; border-color: var(--c-accent); }
+  /* Modal overlay */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 200;
+    align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-sheet {
+    background: var(--c-surface); width: 100%;
+    border-radius: 16px 16px 0 0;
+    padding: 20px var(--pad);
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    max-height: 92vh; overflow-y: auto;
+  }
+  .modal-handle { width: 36px; height: 4px; background: var(--c-border); border-radius: 2px; margin: 0 auto 18px; }
+  .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 18px; }
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: #1A1A18; color: #fff; padding: 10px 20px;
+    border-radius: 20px; font-size: 13px; font-weight: 500;
+    z-index: 300; opacity: 0; transition: opacity .2s; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+  /* Empty state */
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--c-muted); font-size: 14px; }
+  /* Chevron */
+  .chevron { color: var(--c-muted); }
+  /* Divider */
+  .divider { height: 1px; background: var(--c-border); margin: 14px 0; }
+  /* Config row */
+  .config-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 0; border-bottom: 1px solid var(--c-border);
+  }
+  .config-row:last-child { border-bottom: none; }
+  .config-label { font-size: 15px; }
+  .config-val { font-size: 14px; color: var(--c-muted); }
+  /* Loading */
+  .loading { text-align: center; padding: 30px; color: var(--c-muted); font-size: 14px; }
+  /* ODO display */
+  .odo-display { font-size: 12px; color: var(--c-muted); margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div>
+    <div class="app-header h1">🚗 車両管理</div>
+    <div class="subtitle">下呂観光グループ</div>
+  </div>
+  <div id="headerAction"></div>
+</div>
+
+<!-- ページ: ホーム -->
+<div class="page active" id="page-home">
+  <div class="section-title">アラート</div>
+  <div class="card" id="alertList">
+    <div class="loading">読み込み中…</div>
+  </div>
+
+  <div class="section-title">車両一覧</div>
+  <div id="vehicleList">
+    <div class="loading">読み込み中…</div>
+  </div>
+</div>
+
+<!-- ページ: 記録入力 -->
+<div class="page" id="page-input">
+  <div class="section-title">種別を選択</div>
+  <div class="card" style="padding: 10px;">
+    <button class="btn btn-secondary" style="margin-bottom:8px;" onclick="openModal('refuel')">⛽ 給油記録</button>
+    <button class="btn btn-secondary" style="margin-bottom:8px;" onclick="openModal('oil')">🔧 オイル交換</button>
+    <button class="btn btn-secondary" onclick="openModal('shaken')">📋 車検更新</button>
+  </div>
+
+  <div class="section-title">最近の記録</div>
+  <div class="card" id="recentLogs">
+    <div class="loading">読み込み中…</div>
+  </div>
+</div>
+
+<!-- ページ: 車両詳細 -->
+<div class="page" id="page-detail">
+  <div class="detail-header">
+    <button class="back-btn" onclick="goHome()">
+      ← 一覧へ
+    </button>
+  </div>
+  <div id="detailContent"></div>
+</div>
+
+<!-- ページ: 設定 -->
+<div class="page" id="page-settings">
+  <div class="section-title">接続状態</div>
+  <div class="card">
+    <div class="config-row"><span class="config-label">Firebase</span><span class="config-val" id="connectionStatus">接続中…</span></div>
+  </div>
+
+  <div class="section-title">車両管理</div>
+  <div class="card">
+    <button class="btn btn-secondary" style="margin-bottom:8px;" onclick="openModal('addVehicle')">＋ 車両を追加</button>
+    <div id="vehicleSettingList"></div>
+  </div>
+
+  <div class="section-title">このアプリについて</div>
+  <div class="card">
+    <div class="config-row"><span class="config-label">バージョン</span><span class="config-val">1.0.0</span></div>
+    <div class="config-row"><span class="config-label">データ保存先</span><span class="config-val">Firebase Firestore</span></div>
+    <div class="config-row"><span class="config-label">プロジェクト</span><span class="config-val">fleet-c8b03</span></div>
+  </div>
+</div>
+
+<!-- ボトムナビ -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-home" onclick="showPage('home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+    ホーム
+  </button>
+  <button class="nav-btn" id="nav-input" onclick="showPage('input')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>
+    記録
+  </button>
+  <button class="nav-btn" id="nav-settings" onclick="showPage('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    設定
+  </button>
+</nav>
+
+<!-- モーダル: 給油記録 -->
+<div class="modal-overlay" id="modal-refuel">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⛽ 給油記録</div>
+    <div class="form-group">
+      <label class="form-label">車両</label>
+      <div class="form-select-wrap">
+        <select class="form-select" id="rf-vehicle"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">ODO <span id="rf-unit-label">km</span></label>
+        <input class="form-input" type="number" id="rf-odo" placeholder="12345" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">給油量 (L)</label>
+        <input class="form-input" type="number" id="rf-liters" placeholder="40.5" inputmode="decimal" step="0.1">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">単価 (円/L)</label>
+        <input class="form-input" type="number" id="rf-price" placeholder="170" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">日付</label>
+        <input class="form-input" type="date" id="rf-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">メモ</label>
+      <input class="form-input" type="text" id="rf-memo" placeholder="例: 出光 下呂SS">
+    </div>
+    <button class="btn btn-primary" onclick="saveRefuel()">保存</button>
+    <button class="btn btn-secondary" style="margin-top:8px;" onclick="closeModal('refuel')">キャンセル</button>
+  </div>
+</div>
+
+<!-- モーダル: オイル交換 -->
+<div class="modal-overlay" id="modal-oil">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔧 オイル交換記録</div>
+    <div class="form-group">
+      <label class="form-label">車両</label>
+      <div class="form-select-wrap">
+        <select class="form-select" id="oil-vehicle"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">施工時ODO <span id="oil-unit-label">km</span></label>
+        <input class="form-input" type="number" id="oil-odo" placeholder="12345" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">次回目安 <span id="oil-unit-label2">km</span></label>
+        <input class="form-input" type="number" id="oil-next" placeholder="3000" inputmode="numeric">
+        <div class="form-hint">現在ODOに加算</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">費用 (円)</label>
+        <input class="form-input" type="number" id="oil-cost" placeholder="5000" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">日付</label>
+        <input class="form-input" type="date" id="oil-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">メモ</label>
+      <input class="form-input" type="text" id="oil-memo" placeholder="例: 0W-20 4L">
+    </div>
+    <button class="btn btn-primary" onclick="saveOil()">保存</button>
+    <button class="btn btn-secondary" style="margin-top:8px;" onclick="closeModal('oil')">キャンセル</button>
+  </div>
+</div>
+
+<!-- モーダル: 車検 -->
+<div class="modal-overlay" id="modal-shaken">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📋 車検更新</div>
+    <div class="form-group">
+      <label class="form-label">車両</label>
+      <div class="form-select-wrap">
+        <select class="form-select" id="sk-vehicle"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">車検有効期限</label>
+        <input class="form-input" type="date" id="sk-expiry">
+      </div>
+      <div class="form-group">
+        <label class="form-label">費用 (円)</label>
+        <input class="form-input" type="number" id="sk-cost" placeholder="80000" inputmode="numeric">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">メモ</label>
+      <input class="form-input" type="text" id="sk-memo" placeholder="例: ○○モータース">
+    </div>
+    <button class="btn btn-primary" onclick="saveShaken()">保存</button>
+    <button class="btn btn-secondary" style="margin-top:8px;" onclick="closeModal('shaken')">キャンセル</button>
+  </div>
+</div>
+
+<!-- モーダル: 車両追加 -->
+<div class="modal-overlay" id="modal-addVehicle">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="addVehicleTitle">＋ 車両を追加</div>
+    <input type="hidden" id="av-id">
+    <div class="form-group">
+      <label class="form-label">車両名</label>
+      <input class="form-input" type="text" id="av-name" placeholder="例: ハイエース1号">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">ナンバー</label>
+        <input class="form-input" type="text" id="av-plate" placeholder="岐阜 800 あ 1234">
+      </div>
+      <div class="form-group">
+        <label class="form-label">車種</label>
+        <input class="form-input" type="text" id="av-type" placeholder="ハイエース">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ODO単位</label>
+      <div class="unit-toggle">
+        <button class="unit-btn active" id="av-unit-km" onclick="setAvUnit('km')">km</button>
+        <button class="unit-btn" id="av-unit-mi" onclick="setAvUnit('mi')">mile</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">車検期限</label>
+        <input class="form-input" type="date" id="av-shaken">
+      </div>
+      <div class="form-group">
+        <label class="form-label">現在ODO</label>
+        <input class="form-input" type="number" id="av-odo" placeholder="12345" inputmode="numeric">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveVehicle()">保存</button>
+    <button class="btn btn-secondary" style="margin-top:8px;" onclick="closeModal('addVehicle')">キャンセル</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, orderBy, query, where, serverTimestamp, setDoc }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ───────────────────────────────────────
+// State
+let db = null;
+let vehicles = [];
+let avUnit = 'km';
+let currentVehicleId = null;
+let currentDetailTab = 'refuel';
+
+// ───────────────────────────────────────
+// Firebase config (直接埋め込み)
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBqQZMVwSmppRXAC4xuPXWNHdM3-eoKvGk",
+  authDomain: "fleet-c8b03.firebaseapp.com",
+  projectId: "fleet-c8b03",
+};
+
+async function initFirebase() {
+  try {
+    const app = initializeApp(FIREBASE_CONFIG, 'fleet');
+    db = getFirestore(app);
+    document.getElementById('connectionStatus').textContent = '接続済み';
+    document.getElementById('connectionStatus').style.color = 'var(--c-success)';
+    return true;
+  } catch(e) {
+    console.error(e);
+    document.getElementById('connectionStatus').textContent = '接続失敗';
+    document.getElementById('connectionStatus').style.color = 'var(--c-danger)';
+    return false;
+  }
+}
+
+// ───────────────────────────────────────
+// Vehicles CRUD
+async function loadVehicles() {
+  if (!db) { vehicles = JSON.parse(localStorage.getItem('fleetVehicles') || '[]'); return; }
+  const snap = await getDocs(collection(db, 'vehicles'));
+  vehicles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  vehicles.sort((a,b) => (a.sortOrder||0) - (b.sortOrder||0));
+}
+
+window.saveVehicle = async function() {
+  const id = document.getElementById('av-id').value;
+  const data = {
+    name: document.getElementById('av-name').value.trim(),
+    plate: document.getElementById('av-plate').value.trim(),
+    type: document.getElementById('av-type').value.trim(),
+    unit: avUnit,
+    shakenExpiry: document.getElementById('av-shaken').value,
+    currentOdo: parseInt(document.getElementById('av-odo').value) || 0,
+    updatedAt: new Date().toISOString(),
+  };
+  if (!data.name) { showToast('車両名を入力してください'); return; }
+
+  if (db) {
+    if (id) {
+      await updateDoc(doc(db, 'vehicles', id), data);
+    } else {
+      data.createdAt = serverTimestamp();
+      data.sortOrder = vehicles.length;
+      await addDoc(collection(db, 'vehicles'), data);
+    }
+  } else {
+    if (id) {
+      const idx = vehicles.findIndex(v => v.id === id);
+      if (idx >= 0) vehicles[idx] = { ...vehicles[idx], ...data };
+    } else {
+      data.id = Date.now().toString();
+      data.sortOrder = vehicles.length;
+      vehicles.push(data);
+    }
+    localStorage.setItem('fleetVehicles', JSON.stringify(vehicles));
+  }
+  await loadVehicles();
+  closeModal('addVehicle');
+  renderHome();
+  renderVehicleSettings();
+  showToast(id ? '更新しました' : '車両を追加しました');
+};
+
+window.editVehicle = function(id) {
+  const v = vehicles.find(x => x.id === id);
+  if (!v) return;
+  document.getElementById('av-id').value = v.id;
+  document.getElementById('av-name').value = v.name || '';
+  document.getElementById('av-plate').value = v.plate || '';
+  document.getElementById('av-type').value = v.type || '';
+  document.getElementById('av-shaken').value = v.shakenExpiry || '';
+  document.getElementById('av-odo').value = v.currentOdo || '';
+  avUnit = v.unit || 'km';
+  setAvUnit(avUnit);
+  document.getElementById('addVehicleTitle').textContent = '車両を編集';
+  openModal('addVehicle');
+};
+
+window.deleteVehicle = async function(id) {
+  if (!confirm('この車両を削除しますか？記録は残ります。')) return;
+  if (db) await deleteDoc(doc(db, 'vehicles', id));
+  else {
+    vehicles = vehicles.filter(v => v.id !== id);
+    localStorage.setItem('fleetVehicles', JSON.stringify(vehicles));
+  }
+  await loadVehicles();
+  renderHome();
+  renderVehicleSettings();
+  showToast('削除しました');
+};
+
+// ───────────────────────────────────────
+// Logs
+async function getLogs(vehicleId, type, limitN = 50) {
+  if (!db) {
+    const key = `fleetLogs_${vehicleId}_${type}`;
+    const arr = JSON.parse(localStorage.getItem(key) || '[]');
+    return arr.sort((a,b) => b.date.localeCompare(a.date)).slice(0, limitN);
+  }
+  const col = collection(db, 'vehicles', vehicleId, type);
+  const q = query(col, orderBy('date', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, limitN);
+}
+
+async function addLog(vehicleId, type, data) {
+  if (!db) {
+    const key = `fleetLogs_${vehicleId}_${type}`;
+    const arr = JSON.parse(localStorage.getItem(key) || '[]');
+    data.id = Date.now().toString();
+    arr.push(data);
+    localStorage.setItem(key, JSON.stringify(arr));
+    return data.id;
+  }
+  const ref = await addDoc(collection(db, 'vehicles', vehicleId, type), data);
+  return ref.id;
+}
+
+async function getAllRecentLogs(limitN = 20) {
+  const all = [];
+  for (const v of vehicles) {
+    for (const type of ['refuel', 'oil', 'shaken']) {
+      const logs = await getLogs(v.id, type, 5);
+      logs.forEach(l => all.push({ ...l, vehicleId: v.id, vehicleName: v.name, type }));
+    }
+  }
+  return all.sort((a,b) => b.date.localeCompare(a.date)).slice(0, limitN);
+}
+
+// ───────────────────────────────────────
+// Save records
+window.saveRefuel = async function() {
+  const vId = document.getElementById('rf-vehicle').value;
+  const odo = parseInt(document.getElementById('rf-odo').value);
+  const liters = parseFloat(document.getElementById('rf-liters').value);
+  const price = parseInt(document.getElementById('rf-price').value) || 0;
+  const date = document.getElementById('rf-date').value;
+  if (!vId || !date || !odo || !liters) { showToast('車両・日付・ODO・給油量は必須です'); return; }
+
+  const v = vehicles.find(x => x.id === vId);
+  // Calc fuel efficiency from previous log
+  const prevLogs = await getLogs(vId, 'refuel', 2);
+  let efficiency = null;
+  if (prevLogs.length >= 1) {
+    const prev = prevLogs[0];
+    const diff = odo - prev.odo;
+    if (diff > 0 && liters > 0) efficiency = parseFloat((diff / liters).toFixed(1));
+  }
+
+  await addLog(vId, 'refuel', {
+    date, odo, liters, price, memo: document.getElementById('rf-memo').value.trim(),
+    efficiency, unit: v?.unit || 'km'
+  });
+  // Update vehicle ODO
+  if (odo > (v?.currentOdo || 0)) {
+    if (db) await updateDoc(doc(db, 'vehicles', vId), { currentOdo: odo });
+    else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].currentOdo = odo; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
+  }
+  closeModal('refuel');
+  showToast(efficiency ? `保存しました — 燃費 ${efficiency} ${v?.unit||'km'}/L` : '保存しました');
+  await loadVehicles();
+  renderHome();
+};
+
+window.saveOil = async function() {
+  const vId = document.getElementById('oil-vehicle').value;
+  const odo = parseInt(document.getElementById('oil-odo').value);
+  const nextKm = parseInt(document.getElementById('oil-next').value) || 5000;
+  const cost = parseInt(document.getElementById('oil-cost').value) || 0;
+  const date = document.getElementById('oil-date').value;
+  if (!vId || !date || !odo) { showToast('車両・日付・ODOは必須です'); return; }
+
+  const v = vehicles.find(x => x.id === vId);
+  const nextOdo = odo + nextKm;
+
+  await addLog(vId, 'oil', {
+    date, odo, nextOdo, nextKm, cost, memo: document.getElementById('oil-memo').value.trim(),
+    unit: v?.unit || 'km'
+  });
+  if (odo > (v?.currentOdo || 0)) {
+    if (db) await updateDoc(doc(db, 'vehicles', vId), { currentOdo: odo, oilNextOdo: nextOdo });
+    else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].currentOdo = odo; vehicles[idx].oilNextOdo = nextOdo; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
+  } else {
+    if (db) await updateDoc(doc(db, 'vehicles', vId), { oilNextOdo: nextOdo });
+    else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].oilNextOdo = nextOdo; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
+  }
+  closeModal('oil');
+  showToast(`保存しました — 次回 ${nextOdo.toLocaleString()} ${v?.unit||'km'}`)
+  await loadVehicles();
+  renderHome();
+};
+
+window.saveShaken = async function() {
+  const vId = document.getElementById('sk-vehicle').value;
+  const expiry = document.getElementById('sk-expiry').value;
+  const cost = parseInt(document.getElementById('sk-cost').value) || 0;
+  if (!vId || !expiry) { showToast('車両・有効期限は必須です'); return; }
+
+  await addLog(vId, 'shaken', {
+    date: new Date().toISOString().slice(0,10),
+    expiry, cost, memo: document.getElementById('sk-memo').value.trim()
+  });
+  if (db) await updateDoc(doc(db, 'vehicles', vId), { shakenExpiry: expiry });
+  else { const idx = vehicles.findIndex(x => x.id === vId); if (idx>=0) { vehicles[idx].shakenExpiry = expiry; localStorage.setItem('fleetVehicles', JSON.stringify(vehicles)); } }
+  closeModal('shaken');
+  showToast('車検を更新しました');
+  await loadVehicles();
+  renderHome();
+};
+
+// ───────────────────────────────────────
+// Alert logic
+function getDaysUntil(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  return Math.ceil((d - now) / 86400000);
+}
+
+function getShakenStatus(v) {
+  const days = getDaysUntil(v.shakenExpiry);
+  if (days === null) return { type: 'muted', label: '未登録', days: null };
+  if (days < 0) return { type: 'danger', label: `期限切れ ${Math.abs(days)}日超過`, days };
+  if (days <= 30) return { type: 'danger', label: `あと${days}日`, days };
+  if (days <= 90) return { type: 'warn', label: `あと${days}日`, days };
+  return { type: 'ok', label: `あと${days}日`, days };
+}
+
+function getOilStatus(v) {
+  if (!v.oilNextOdo) return { type: 'muted', label: '未記録' };
+  const diff = v.oilNextOdo - (v.currentOdo || 0);
+  const unit = v.unit || 'km';
+  if (diff < 0) return { type: 'danger', label: `交換超過 ${Math.abs(diff).toLocaleString()}${unit}` };
+  if (diff <= 500) return { type: 'danger', label: `残${diff.toLocaleString()}${unit}` };
+  if (diff <= 1500) return { type: 'warn', label: `残${diff.toLocaleString()}${unit}` };
+  return { type: 'ok', label: `残${diff.toLocaleString()}${unit}` };
+}
+
+// ───────────────────────────────────────
+// Render: Home
+async function renderHome() {
+  renderAlerts();
+  renderVehicleList();
+}
+
+function renderAlerts() {
+  const el = document.getElementById('alertList');
+  const alerts = [];
+  vehicles.forEach(v => {
+    const shaken = getShakenStatus(v);
+    if (shaken.type === 'danger' || shaken.type === 'warn') {
+      alerts.push({ type: shaken.type, text: `${v.name} — 車検${shaken.days < 0 ? '期限切れ' : '期限近づ'} `, sub: `有効期限: ${v.shakenExpiry || '不明'} (${shaken.label})` });
+    }
+    const oil = getOilStatus(v);
+    if (oil.type === 'danger' || oil.type === 'warn') {
+      alerts.push({ type: oil.type, text: `${v.name} — オイル交換`, sub: oil.label });
+    }
+  });
+  if (alerts.length === 0) {
+    el.innerHTML = '<div style="text-align:center; padding:12px 0; color:var(--c-success); font-size:14px;">✓ アラートなし</div>';
+    return;
+  }
+  el.innerHTML = alerts.map(a => `
+    <div class="alert-item">
+      <div class="alert-dot ${a.type}"></div>
+      <div>
+        <div class="alert-text">${a.text}</div>
+        <div class="alert-sub">${a.sub}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderVehicleList() {
+  const el = document.getElementById('vehicleList');
+  if (vehicles.length === 0) {
+    el.innerHTML = '<div class="empty-state">設定タブから車両を追加してください</div>';
+    return;
+  }
+  el.innerHTML = vehicles.map(v => {
+    const shaken = getShakenStatus(v);
+    const oil = getOilStatus(v);
+    const unit = v.unit || 'km';
+    return `
+    <div class="vehicle-card" onclick="showDetail('${v.id}')">
+      <div class="vehicle-card-header">
+        <div>
+          <div class="vehicle-name">${v.name}</div>
+          <div style="font-size:12px; color:var(--c-muted); margin-top:1px;">${v.type || ''} ${v.plate ? '/ '+v.plate : ''}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:14px; font-weight:600;">${(v.currentOdo||0).toLocaleString()}</div>
+          <div style="font-size:11px; color:var(--c-muted);">${unit}</div>
+        </div>
+      </div>
+      <div class="vehicle-badges">
+        <span class="badge badge-${shaken.type}">🔍 ${shaken.label}</span>
+        <span class="badge badge-${oil.type}">🔧 ${oil.label}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ───────────────────────────────────────
+// Render: Vehicle Detail
+window.showDetail = async function(id) {
+  currentVehicleId = id;
+  currentDetailTab = 'refuel';
+  showPage('detail');
+  await renderDetail();
+};
+
+async function renderDetail() {
+  const v = vehicles.find(x => x.id === currentVehicleId);
+  if (!v) return;
+  const unit = v.unit || 'km';
+  const shaken = getShakenStatus(v);
+  const oil = getOilStatus(v);
+
+  const refuelLogs = await getLogs(v.id, 'refuel', 50);
+  const oilLogs = await getLogs(v.id, 'oil', 50);
+  const shakenLogs = await getLogs(v.id, 'shaken', 50);
+
+  // Fuel efficiency avg
+  const effVals = refuelLogs.filter(r => r.efficiency).map(r => r.efficiency);
+  const avgEff = effVals.length ? (effVals.reduce((a,b)=>a+b,0)/effVals.length).toFixed(1) : '—';
+  const lastEff = effVals.length ? effVals[0].toFixed(1) : '—';
+
+  document.getElementById('detailContent').innerHTML = `
+    <div class="card" style="margin-bottom:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div style="font-size:18px; font-weight:600;">${v.name}</div>
+          <div style="font-size:12px; color:var(--c-muted);">${v.type||''} ${v.plate ? '/ '+v.plate : ''} / ${unit}</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="editVehicle('${v.id}')">編集</button>
+      </div>
+      <div class="divider"></div>
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-val">${(v.currentOdo||0).toLocaleString()}</div>
+          <div class="stat-label">現在ODO (${unit})</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">${avgEff}</div>
+          <div class="stat-label">平均燃費 ${unit}/L</div>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--c-${shaken.type==='ok'?'success':shaken.type==='warn'?'warning':'danger'})">${shaken.label}</div>
+          <div class="stat-label">車検 ${v.shakenExpiry||'—'}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--c-${oil.type==='ok'?'success':oil.type==='warn'?'warning':'danger'})">${oil.label}</div>
+          <div class="stat-label">次回オイル ${v.oilNextOdo ? v.oilNextOdo.toLocaleString()+unit : '—'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn ${currentDetailTab==='refuel'?'active':''}" onclick="switchDetailTab('refuel')">給油</button>
+      <button class="tab-btn ${currentDetailTab==='oil'?'active':''}" onclick="switchDetailTab('oil')">オイル</button>
+      <button class="tab-btn ${currentDetailTab==='shaken'?'active':''}" onclick="switchDetailTab('shaken')">車検</button>
+    </div>
+
+    <div id="detailTabContent">
+      ${renderLogTab(currentDetailTab, refuelLogs, oilLogs, shakenLogs, unit)}
+    </div>
+  `;
+}
+
+function renderLogTab(tab, refuelLogs, oilLogs, shakenLogs, unit) {
+  if (tab === 'refuel') {
+    if (!refuelLogs.length) return '<div class="empty-state">給油記録がありません</div>';
+    return '<div class="card">' + refuelLogs.map(l => `
+      <div class="log-item">
+        <div>
+          <div class="log-date">${l.date}</div>
+          <div class="log-main">${l.liters}L / ${l.odo.toLocaleString()}${unit}</div>
+          <div class="log-sub">${l.memo||''}</div>
+        </div>
+        <div class="log-val">
+          ${l.efficiency ? l.efficiency+' '+unit+'/L' : '—'}
+          ${l.price ? '<div style="font-size:11px;color:var(--c-muted);">@'+l.price+'円</div>' : ''}
+        </div>
+      </div>`).join('') + '</div>';
+  }
+  if (tab === 'oil') {
+    if (!oilLogs.length) return '<div class="empty-state">オイル交換記録がありません</div>';
+    return '<div class="card">' + oilLogs.map(l => `
+      <div class="log-item">
+        <div>
+          <div class="log-date">${l.date}</div>
+          <div class="log-main">${l.odo.toLocaleString()}${unit}で交換</div>
+          <div class="log-sub">${l.memo||''}</div>
+        </div>
+        <div class="log-val">
+          次回 ${l.nextOdo ? l.nextOdo.toLocaleString()+unit : '—'}
+          ${l.cost ? '<div style="font-size:11px;color:var(--c-muted);">'+l.cost.toLocaleString()+'円</div>' : ''}
+        </div>
+      </div>`).join('') + '</div>';
+  }
+  if (tab === 'shaken') {
+    if (!shakenLogs.length) return '<div class="empty-state">車検記録がありません</div>';
+    return '<div class="card">' + shakenLogs.map(l => `
+      <div class="log-item">
+        <div>
+          <div class="log-date">${l.date}</div>
+          <div class="log-main">有効期限: ${l.expiry}</div>
+          <div class="log-sub">${l.memo||''}</div>
+        </div>
+        <div class="log-val">
+          ${l.cost ? l.cost.toLocaleString()+'円' : '—'}
+        </div>
+      </div>`).join('') + '</div>';
+  }
+  return '';
+}
+
+window.switchDetailTab = async function(tab) {
+  currentDetailTab = tab;
+  await renderDetail();
+};
+
+// ───────────────────────────────────────
+// Render: Input page recent logs
+async function renderRecentLogs() {
+  const el = document.getElementById('recentLogs');
+  el.innerHTML = '<div class="loading">読み込み中…</div>';
+  const logs = await getAllRecentLogs(20);
+  if (!logs.length) { el.innerHTML = '<div class="empty-state">記録がありません</div>'; return; }
+  const typeIcon = { refuel:'⛽', oil:'🔧', shaken:'📋' };
+  const typeName = { refuel:'給油', oil:'オイル', shaken:'車検' };
+  el.innerHTML = logs.map(l => `
+    <div class="log-item">
+      <div>
+        <div class="log-date">${l.date} — ${typeIcon[l.type]}${typeName[l.type]}</div>
+        <div class="log-main">${l.vehicleName}</div>
+        <div class="log-sub">${l.type==='refuel'?(l.liters+'L'):l.type==='oil'?('ODO '+l.odo.toLocaleString()):('車検 '+l.expiry)}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ───────────────────────────────────────
+// Render: Settings vehicle list
+function renderVehicleSettings() {
+  const el = document.getElementById('vehicleSettingList');
+  if (!vehicles.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="divider"></div>' + vehicles.map(v => `
+    <div class="config-row">
+      <span class="config-label">${v.name}<span style="font-size:11px; color:var(--c-muted); margin-left:6px;">${v.unit||'km'}</span></span>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="editVehicle('${v.id}')">編集</button>
+        <button class="btn btn-secondary btn-sm" style="color:var(--c-danger);" onclick="deleteVehicle('${v.id}')">削除</button>
+      </div>
+    </div>`).join('');
+}
+
+// ───────────────────────────────────────
+// Navigation
+window.showPage = function(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const navEl = document.getElementById('nav-'+name);
+  if (navEl) navEl.classList.add('active');
+  if (name === 'input') renderRecentLogs();
+  if (name === 'settings') renderVehicleSettings();
+  if (name === 'home') renderHome();
+};
+
+window.goHome = function() { showPage('home'); };
+
+// ───────────────────────────────────────
+// Modal
+function populateVehicleSelect(selectId, unitLabelId, unitLabelId2) {
+  const el = document.getElementById(selectId);
+  el.innerHTML = vehicles.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+  function updateUnit() {
+    const v = vehicles.find(x => x.id === el.value);
+    const u = v?.unit || 'km';
+    if (unitLabelId) document.getElementById(unitLabelId).textContent = u;
+    if (unitLabelId2) document.getElementById(unitLabelId2).textContent = u;
+  }
+  el.onchange = updateUnit;
+  updateUnit();
+}
+
+window.openModal = function(name) {
+  const today = new Date().toISOString().slice(0,10);
+  if (name === 'refuel') {
+    document.getElementById('rf-date').value = today;
+    document.getElementById('rf-memo').value = '';
+    document.getElementById('rf-liters').value = '';
+    document.getElementById('rf-odo').value = '';
+    document.getElementById('rf-price').value = '';
+    populateVehicleSelect('rf-vehicle', 'rf-unit-label');
+  }
+  if (name === 'oil') {
+    document.getElementById('oil-date').value = today;
+    document.getElementById('oil-memo').value = '';
+    document.getElementById('oil-odo').value = '';
+    document.getElementById('oil-next').value = '5000';
+    document.getElementById('oil-cost').value = '';
+    populateVehicleSelect('oil-vehicle', 'oil-unit-label', 'oil-unit-label2');
+  }
+  if (name === 'shaken') {
+    document.getElementById('sk-memo').value = '';
+    document.getElementById('sk-cost').value = '';
+    document.getElementById('sk-expiry').value = '';
+    populateVehicleSelect('sk-vehicle');
+  }
+  if (name === 'addVehicle') {
+    document.getElementById('av-id').value = '';
+    document.getElementById('av-name').value = '';
+    document.getElementById('av-plate').value = '';
+    document.getElementById('av-type').value = '';
+    document.getElementById('av-shaken').value = '';
+    document.getElementById('av-odo').value = '';
+    avUnit = 'km'; setAvUnit('km');
+    document.getElementById('addVehicleTitle').textContent = '＋ 車両を追加';
+  }
+  document.getElementById('modal-'+name).classList.add('open');
+};
+
+window.closeModal = function(name) {
+  document.getElementById('modal-'+name).classList.remove('open');
+};
+
+// Close on overlay tap
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', function(e) {
+    if (e.target === el) el.classList.remove('open');
+  });
+});
+
+// ───────────────────────────────────────
+// Unit toggle
+window.setAvUnit = function(u) {
+  avUnit = u;
+  document.getElementById('av-unit-km').classList.toggle('active', u==='km');
+  document.getElementById('av-unit-mi').classList.toggle('active', u==='mi');
+};
+
+// ───────────────────────────────────────
+// Toast
+window.showToast = function(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+};
+
+// ───────────────────────────────────────
+// Boot
+(async function() {
+  await initFirebase();
+  await loadVehicles();
+  renderHome();
+  renderVehicleSettings();
+})();
+</script>
+</body>
+</html>
