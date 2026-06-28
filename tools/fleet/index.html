@@ -484,6 +484,11 @@
       </div>
     </div>
     <div class="form-group">
+      <label class="form-label">年式（西暦）</label>
+      <input class="form-input" type="number" id="av-year" placeholder="2019" inputmode="numeric" oninput="updateWareki()">
+      <div class="form-hint" id="av-wareki"></div>
+    </div>
+    <div class="form-group">
       <label class="form-label">ODO単位</label>
       <div class="unit-toggle">
         <button class="unit-btn active" id="av-unit-km" onclick="setAvUnit('km')">km</button>
@@ -558,6 +563,7 @@ window.saveVehicle = async function() {
     name: document.getElementById('av-name').value.trim(),
     plate: document.getElementById('av-plate').value.trim(),
     type: document.getElementById('av-type').value.trim(),
+    year: parseInt(document.getElementById('av-year').value) || null,
     unit: avUnit,
     shakenExpiry: document.getElementById('av-shaken').value,
     currentOdo: parseInt(document.getElementById('av-odo').value) || 0,
@@ -598,6 +604,8 @@ window.editVehicle = function(id) {
   document.getElementById('av-name').value = v.name || '';
   document.getElementById('av-plate').value = v.plate || '';
   document.getElementById('av-type').value = v.type || '';
+  document.getElementById('av-year').value = v.year || '';
+  document.getElementById('av-wareki').textContent = v.year ? toWareki(v.year) : '';
   document.getElementById('av-shaken').value = v.shakenExpiry || '';
   document.getElementById('av-odo').value = v.currentOdo || '';
   avUnit = v.unit || 'km';
@@ -913,7 +921,7 @@ async function renderDetail() {
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         <div>
           <div style="font-size:18px; font-weight:600;">${v.name}</div>
-          <div style="font-size:12px; color:var(--c-muted);">${v.type||''} ${v.plate ? '/ '+v.plate : ''} / ${unit}</div>
+          <div style="font-size:12px; color:var(--c-muted);">${v.type||''} ${v.plate ? '/ '+v.plate : ''} ${v.year ? '/ '+v.year+'年（'+toWareki(v.year)+'）' : ''} / ${unit}</div>
         </div>
         <button class="btn btn-secondary btn-sm" onclick="editVehicle('${v.id}')">編集</button>
       </div>
@@ -1131,6 +1139,8 @@ window.openModal = function(name) {
     document.getElementById('av-name').value = '';
     document.getElementById('av-plate').value = '';
     document.getElementById('av-type').value = '';
+    document.getElementById('av-year').value = '';
+    document.getElementById('av-wareki').textContent = '';
     document.getElementById('av-shaken').value = '';
     document.getElementById('av-odo').value = '';
     avUnit = 'km'; setAvUnit('km');
@@ -1197,7 +1207,21 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 });
 
 // ───────────────────────────────────────
-// Unit toggle
+// 和暦変換
+function toWareki(year) {
+  if (!year || year < 1868) return '';
+  if (year >= 2019) return `令和${year - 2018}年`;
+  if (year >= 1989) return `平成${year - 1988}年`;
+  if (year >= 1926) return `昭和${year - 1925}年`;
+  if (year >= 1912) return `大正${year - 1911}年`;
+  return `明治${year - 1867}年`;
+}
+
+window.updateWareki = function() {
+  const y = parseInt(document.getElementById('av-year').value);
+  const el = document.getElementById('av-wareki');
+  el.textContent = y ? toWareki(y) : '';
+};
 window.setAvUnit = function(u) {
   avUnit = u;
   document.getElementById('av-unit-km').classList.toggle('active', u==='km');
