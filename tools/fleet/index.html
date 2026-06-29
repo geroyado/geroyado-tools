@@ -505,6 +505,34 @@
         <input class="form-input" type="number" id="av-odo" placeholder="12345" inputmode="numeric">
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">オイル量</label>
+        <input class="form-input" type="text" id="av-oilVolume" placeholder="4.5L">
+      </div>
+      <div class="form-group">
+        <label class="form-label">オイル粘度</label>
+        <input class="form-input" type="text" id="av-oilViscosity" placeholder="0W-20">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">空気圧単位</label>
+      <div class="unit-toggle">
+        <button class="unit-btn active" id="av-tire-kpa" onclick="setTireUnit('kPa')">kPa</button>
+        <button class="unit-btn" id="av-tire-psi" onclick="setTireUnit('PSI')">PSI</button>
+        <button class="unit-btn" id="av-tire-bar" onclick="setTireUnit('BAR')">BAR</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">空気圧（前）</label>
+        <input class="form-input" type="number" id="av-tireFront" placeholder="230" inputmode="decimal" step="0.1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">空気圧（後）</label>
+        <input class="form-input" type="number" id="av-tireRear" placeholder="250" inputmode="decimal" step="0.1">
+      </div>
+    </div>
     <button class="btn btn-primary" onclick="saveVehicle()">保存</button>
     <button class="btn btn-secondary" style="margin-top:8px;" onclick="closeModal('addVehicle')">キャンセル</button>
   </div>
@@ -522,6 +550,7 @@ import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, g
 let db = null;
 let vehicles = [];
 let avUnit = 'km';
+let avTireUnit = 'kPa';
 let currentVehicleId = null;
 let currentDetailTab = 'refuel';
 
@@ -567,6 +596,11 @@ window.saveVehicle = async function() {
     unit: avUnit,
     shakenExpiry: document.getElementById('av-shaken').value,
     currentOdo: parseInt(document.getElementById('av-odo').value) || 0,
+    oilVolume: document.getElementById('av-oilVolume').value.trim(),
+    oilViscosity: document.getElementById('av-oilViscosity').value.trim(),
+    tireUnit: avTireUnit,
+    tireFront: document.getElementById('av-tireFront').value ? parseFloat(document.getElementById('av-tireFront').value) : null,
+    tireRear: document.getElementById('av-tireRear').value ? parseFloat(document.getElementById('av-tireRear').value) : null,
     updatedAt: new Date().toISOString(),
   };
   if (!data.name) { showToast('車両名を入力してください'); return; }
@@ -608,8 +642,14 @@ window.editVehicle = function(id) {
   document.getElementById('av-wareki').textContent = v.year ? toWareki(v.year) : '';
   document.getElementById('av-shaken').value = v.shakenExpiry || '';
   document.getElementById('av-odo').value = v.currentOdo || '';
+  document.getElementById('av-oilVolume').value = v.oilVolume || '';
+  document.getElementById('av-oilViscosity').value = v.oilViscosity || '';
+  document.getElementById('av-tireFront').value = v.tireFront ?? '';
+  document.getElementById('av-tireRear').value = v.tireRear ?? '';
   avUnit = v.unit || 'km';
   setAvUnit(avUnit);
+  avTireUnit = v.tireUnit || 'kPa';
+  setTireUnit(avTireUnit);
   document.getElementById('addVehicleTitle').textContent = '車両を編集';
   document.getElementById('modal-addVehicle').classList.add('open');
 };
@@ -993,6 +1033,19 @@ async function renderDetail() {
           ${oil.filterAlert ? '<div style="font-size:11px; color:var(--c-warning); margin-top:3px; font-weight:500;">🔩 要フィルター交換</div>' : ''}
         </div>
       </div>
+      ${(v.oilVolume || v.oilViscosity || v.tireFront != null || v.tireRear != null) ? `
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+        ${(v.oilVolume || v.oilViscosity) ? `
+        <div style="background:var(--c-bg); border-radius:8px; padding:10px 12px;">
+          <div style="font-size:11px; color:var(--c-muted); margin-bottom:3px;">🔧 オイル規格</div>
+          <div style="font-size:13px; font-weight:600;">${[v.oilViscosity, v.oilVolume].filter(Boolean).join(' / ')}</div>
+        </div>` : '<div></div>'}
+        ${(v.tireFront != null || v.tireRear != null) ? `
+        <div style="background:var(--c-bg); border-radius:8px; padding:10px 12px;">
+          <div style="font-size:11px; color:var(--c-muted); margin-bottom:3px;">🔵 空気圧 (${v.tireUnit||'kPa'})</div>
+          <div style="font-size:13px; font-weight:600;">前 ${v.tireFront ?? '—'} / 後 ${v.tireRear ?? '—'}</div>
+        </div>` : '<div></div>'}
+      </div>` : ''}
     </div>
 
     <div class="tab-bar">
@@ -1189,7 +1242,12 @@ window.openModal = function(name) {
     document.getElementById('av-wareki').textContent = '';
     document.getElementById('av-shaken').value = '';
     document.getElementById('av-odo').value = '';
+    document.getElementById('av-oilVolume').value = '';
+    document.getElementById('av-oilViscosity').value = '';
+    document.getElementById('av-tireFront').value = '';
+    document.getElementById('av-tireRear').value = '';
     avUnit = 'km'; setAvUnit('km');
+    avTireUnit = 'kPa'; setTireUnit('kPa');
     document.getElementById('addVehicleTitle').textContent = '＋ 車両を追加';
   }
   document.getElementById('modal-'+name).classList.add('open');
@@ -1272,6 +1330,13 @@ window.setAvUnit = function(u) {
   avUnit = u;
   document.getElementById('av-unit-km').classList.toggle('active', u==='km');
   document.getElementById('av-unit-mi').classList.toggle('active', u==='mi');
+};
+
+window.setTireUnit = function(u) {
+  avTireUnit = u;
+  document.getElementById('av-tire-kpa').classList.toggle('active', u==='kPa');
+  document.getElementById('av-tire-psi').classList.toggle('active', u==='PSI');
+  document.getElementById('av-tire-bar').classList.toggle('active', u==='BAR');
 };
 
 // ───────────────────────────────────────
