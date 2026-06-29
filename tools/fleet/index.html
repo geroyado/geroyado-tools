@@ -412,13 +412,14 @@
     </div>
     <div class="form-group">
       <label class="form-label">フィルター交換</label>
-      <div style="display:flex; gap:10px;">
+      <div style="display:flex; gap:10px; align-items:center;">
         <label style="display:flex; align-items:center; gap:6px; font-size:15px; cursor:pointer;">
-          <input type="radio" name="oil-filter" id="oil-filter-yes" value="yes" checked style="width:18px;height:18px;"> あり
+          <input type="radio" name="oil-filter" id="oil-filter-yes" value="yes" checked style="width:18px;height:18px;" onchange="updateOilVolumeHint()"> あり
         </label>
         <label style="display:flex; align-items:center; gap:6px; font-size:15px; cursor:pointer;">
-          <input type="radio" name="oil-filter" id="oil-filter-no" value="no" style="width:18px;height:18px;"> なし
+          <input type="radio" name="oil-filter" id="oil-filter-no" value="no" style="width:18px;height:18px;" onchange="updateOilVolumeHint()"> なし
         </label>
+        <span id="oil-volume-hint" style="font-size:13px; font-weight:600; color:var(--c-accent); margin-left:8px;"></span>
       </div>
     </div>
     <div class="form-group">
@@ -507,13 +508,17 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">オイル量</label>
-        <input class="form-input" type="text" id="av-oilVolume" placeholder="4.5L">
+        <label class="form-label">オイル量（F交換あり）</label>
+        <input class="form-input" type="text" id="av-oilVolumeWith" placeholder="4.5L">
       </div>
       <div class="form-group">
-        <label class="form-label">オイル粘度</label>
-        <input class="form-input" type="text" id="av-oilViscosity" placeholder="0W-20">
+        <label class="form-label">オイル量（F交換なし）</label>
+        <input class="form-input" type="text" id="av-oilVolumeWithout" placeholder="4.2L">
       </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">オイル粘度</label>
+      <input class="form-input" type="text" id="av-oilViscosity" placeholder="0W-20">
     </div>
     <div class="form-group">
       <label class="form-label">空気圧単位</label>
@@ -596,7 +601,8 @@ window.saveVehicle = async function() {
     unit: avUnit,
     shakenExpiry: document.getElementById('av-shaken').value,
     currentOdo: parseInt(document.getElementById('av-odo').value) || 0,
-    oilVolume: document.getElementById('av-oilVolume').value.trim(),
+    oilVolumeWith: document.getElementById('av-oilVolumeWith').value.trim(),
+    oilVolumeWithout: document.getElementById('av-oilVolumeWithout').value.trim(),
     oilViscosity: document.getElementById('av-oilViscosity').value.trim(),
     tireUnit: avTireUnit,
     tireFront: document.getElementById('av-tireFront').value ? parseFloat(document.getElementById('av-tireFront').value) : null,
@@ -642,7 +648,8 @@ window.editVehicle = function(id) {
   document.getElementById('av-wareki').textContent = v.year ? toWareki(v.year) : '';
   document.getElementById('av-shaken').value = v.shakenExpiry || '';
   document.getElementById('av-odo').value = v.currentOdo || '';
-  document.getElementById('av-oilVolume').value = v.oilVolume || '';
+  document.getElementById('av-oilVolumeWith').value = v.oilVolumeWith || '';
+  document.getElementById('av-oilVolumeWithout').value = v.oilVolumeWithout || '';
   document.getElementById('av-oilViscosity').value = v.oilViscosity || '';
   document.getElementById('av-tireFront').value = v.tireFront ?? '';
   document.getElementById('av-tireRear').value = v.tireRear ?? '';
@@ -1033,12 +1040,14 @@ async function renderDetail() {
           ${oil.filterAlert ? '<div style="font-size:11px; color:var(--c-warning); margin-top:3px; font-weight:500;">🔩 要フィルター交換</div>' : ''}
         </div>
       </div>
-      ${(v.oilVolume || v.oilViscosity || v.tireFront != null || v.tireRear != null) ? `
+      ${(v.oilVolumeWith || v.oilVolumeWithout || v.oilViscosity || v.tireFront != null || v.tireRear != null) ? `
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
-        ${(v.oilVolume || v.oilViscosity) ? `
+        ${(v.oilVolumeWith || v.oilVolumeWithout || v.oilViscosity) ? `
         <div style="background:var(--c-bg); border-radius:8px; padding:10px 12px;">
-          <div style="font-size:11px; color:var(--c-muted); margin-bottom:3px;">🔧 オイル規格</div>
-          <div style="font-size:13px; font-weight:600;">${[v.oilViscosity, v.oilVolume].filter(Boolean).join(' / ')}</div>
+          <div style="font-size:11px; color:var(--c-muted); margin-bottom:4px;">🔧 オイル規格</div>
+          ${v.oilViscosity ? `<div style="font-size:13px; font-weight:600; margin-bottom:3px;">${v.oilViscosity}</div>` : ''}
+          ${v.oilVolumeWith ? `<div style="font-size:12px; color:var(--c-muted);">F交換あり：${v.oilVolumeWith}</div>` : ''}
+          ${v.oilVolumeWithout ? `<div style="font-size:12px; color:var(--c-muted);">F交換なし：${v.oilVolumeWithout}</div>` : ''}
         </div>` : '<div></div>'}
         ${(v.tireFront != null || v.tireRear != null) ? `
         <div style="background:var(--c-bg); border-radius:8px; padding:10px 12px;">
@@ -1186,7 +1195,7 @@ window.goHome = function() { showPage('home'); };
 
 // ───────────────────────────────────────
 // Modal
-function populateVehicleSelect(selectId, unitLabelId, unitLabelId2) {
+function populateVehicleSelect(selectId, unitLabelId, unitLabelId2, extraOnChange) {
   const el = document.getElementById(selectId);
   el.innerHTML = vehicles.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
   function updateUnit() {
@@ -1194,6 +1203,7 @@ function populateVehicleSelect(selectId, unitLabelId, unitLabelId2) {
     const u = v?.unit || 'km';
     if (unitLabelId) document.getElementById(unitLabelId).textContent = u;
     if (unitLabelId2) document.getElementById(unitLabelId2).textContent = u;
+    if (extraOnChange) extraOnChange();
   }
   el.onchange = updateUnit;
   updateUnit();
@@ -1222,7 +1232,8 @@ window.openModal = function(name) {
     document.getElementById('oil-next').value = '5000';
     document.getElementById('oil-cost').value = '';
     document.getElementById('oil-filter-yes').checked = true;
-    populateVehicleSelect('oil-vehicle', 'oil-unit-label', 'oil-unit-label2');
+    populateVehicleSelect('oil-vehicle', 'oil-unit-label', 'oil-unit-label2', updateOilVolumeHint);
+    updateOilVolumeHint();
   }
   if (name === 'shaken') {
     document.getElementById('sk-id').value = '';
@@ -1242,7 +1253,8 @@ window.openModal = function(name) {
     document.getElementById('av-wareki').textContent = '';
     document.getElementById('av-shaken').value = '';
     document.getElementById('av-odo').value = '';
-    document.getElementById('av-oilVolume').value = '';
+    document.getElementById('av-oilVolumeWith').value = '';
+    document.getElementById('av-oilVolumeWithout').value = '';
     document.getElementById('av-oilViscosity').value = '';
     document.getElementById('av-tireFront').value = '';
     document.getElementById('av-tireRear').value = '';
@@ -1282,8 +1294,9 @@ window.editLog = async function(type, vehicleId, logId) {
     document.getElementById('oil-memo').value = l.memo || '';
     document.getElementById('oil-filter-yes').checked = l.filterChanged !== false;
     document.getElementById('oil-filter-no').checked = l.filterChanged === false;
-    populateVehicleSelect('oil-vehicle', 'oil-unit-label', 'oil-unit-label2');
+    populateVehicleSelect('oil-vehicle', 'oil-unit-label', 'oil-unit-label2', updateOilVolumeHint);
     document.getElementById('oil-vehicle').value = vehicleId;
+    updateOilVolumeHint();
     document.getElementById('modal-oil').classList.add('open');
   }
   if (type === 'shaken') {
@@ -1337,6 +1350,17 @@ window.setTireUnit = function(u) {
   document.getElementById('av-tire-kpa').classList.toggle('active', u==='kPa');
   document.getElementById('av-tire-psi').classList.toggle('active', u==='PSI');
   document.getElementById('av-tire-bar').classList.toggle('active', u==='BAR');
+};
+
+window.updateOilVolumeHint = function() {
+  const vId = document.getElementById('oil-vehicle').value;
+  const v = vehicles.find(x => x.id === vId);
+  if (!v) { document.getElementById('oil-volume-hint').textContent = ''; return; }
+  const filterYes = document.getElementById('oil-filter-yes').checked;
+  const vol = filterYes ? v.oilVolumeWith : v.oilVolumeWithout;
+  const visc = v.oilViscosity || '';
+  const hint = [visc, vol || ''].filter(Boolean).join(' / ');
+  document.getElementById('oil-volume-hint').textContent = hint ? `→ ${hint}` : '';
 };
 
 // ───────────────────────────────────────
