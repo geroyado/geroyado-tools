@@ -445,20 +445,47 @@ let currentDateKey = dateKey;
   }
 })();
 
-window.switchDate = function(key) {
+window.switchDate = async function(key) {
   currentDateKey = key;
-  onValue(ref(db, `daily/${key}`), (snap) => {
-    currentData = snap.val();
-    const badge = document.getElementById('statusBadge');
-    if (!currentData) {
-      badge.textContent = 'データなし'; badge.className = 'status-badge status-draft';
-    } else if (currentData.status === 'confirmed') {
-      badge.textContent = '確定済み'; badge.className = 'status-badge status-confirmed';
-    } else {
-      badge.textContent = '未確定'; badge.className = 'status-badge status-draft';
+  const badge = document.getElementById('statusBadge');
+  badge.textContent = '読込中…'; badge.className = 'status-badge status-loading';
+
+  // 確定データを最大7日前まで遡って検索
+  let foundKey = null;
+  let foundData = null;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(key);
+    d.setDate(d.getDate() - i);
+    const searchKey = d.getFullYear() + '-'
+      + String(d.getMonth()+1).padStart(2,'0') + '-'
+      + String(d.getDate()).padStart(2,'0');
+    const snap = await new Promise(resolve => {
+      onValue(ref(db, `daily/${searchKey}`), resolve, { onlyOnce: true });
+    });
+    const data = snap.val();
+    if (data && data.status === 'confirmed') {
+      foundKey = searchKey;
+      foundData = data;
+      break;
     }
-    applyData(currentCourse, currentData);
-  }, { onlyOnce: true });
+    // 当日（i===0）は未確定でも表示
+    if (i === 0 && data) {
+      foundKey = searchKey;
+      foundData = data;
+      break;
+    }
+  }
+
+  currentData = foundData;
+  if (!currentData) {
+    badge.textContent = 'データなし'; badge.className = 'status-badge status-draft';
+  } else if (currentData.status === 'confirmed') {
+    badge.textContent = foundKey === key ? '確定済み' : `確定済み（${foundKey}のデータ）`;
+    badge.className = 'status-badge status-confirmed';
+  } else {
+    badge.textContent = '未確定'; badge.className = 'status-badge status-draft';
+  }
+  applyData(currentCourse, currentData);
 };
 
 const kanjiMonths    = ['睦月','如月','弥生','卯月','皐月','水無月','文月','葉月','長月','神無月','霜月','師走'];
