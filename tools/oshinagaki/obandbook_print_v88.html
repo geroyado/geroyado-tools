@@ -445,10 +445,32 @@ let currentDateKey = dateKey;
   }
 })();
 
+let todayUnsubscribe = null;
+
 window.switchDate = async function(key) {
   currentDateKey = key;
   const badge = document.getElementById('statusBadge');
   badge.textContent = '読込中…'; badge.className = 'status-badge status-loading';
+
+  // 当日に戻った場合はリアルタイム監視に切り替え
+  if (key === dateKey) {
+    if (todayUnsubscribe) todayUnsubscribe();
+    todayUnsubscribe = onValue(ref(db, `daily/${dateKey}`), (snap) => {
+      currentData = snap.val();
+      if (!currentData) {
+        badge.textContent = 'データなし'; badge.className = 'status-badge status-draft';
+      } else if (currentData.status === 'confirmed') {
+        badge.textContent = '確定済み'; badge.className = 'status-badge status-confirmed';
+      } else {
+        badge.textContent = '未確定'; badge.className = 'status-badge status-draft';
+      }
+      applyData(currentCourse, currentData);
+    });
+    return;
+  }
+
+  // 過去日付の場合：リアルタイム監視を解除して一度だけ取得
+  if (todayUnsubscribe) { todayUnsubscribe(); todayUnsubscribe = null; }
 
   // 確定データを最大7日前まで遡って検索
   let foundKey = null;
@@ -468,7 +490,6 @@ window.switchDate = async function(key) {
       foundData = data;
       break;
     }
-    // 当日（i===0）は未確定でも表示
     if (i === 0 && data) {
       foundKey = searchKey;
       foundData = data;
@@ -593,7 +614,7 @@ function applyData(course, data) {
 let currentData = null;
 let currentCourse = 'yuki';
 
-onValue(ref(db, `daily/${currentDateKey}`), (snap) => {
+todayUnsubscribe = onValue(ref(db, `daily/${currentDateKey}`), (snap) => {
   currentData = snap.val();
   const badge = document.getElementById('statusBadge');
   if (!currentData) {
