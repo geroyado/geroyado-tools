@@ -647,7 +647,13 @@ function switchCourse(course) {
   ['col-rakumori-lp','col-rakumori-rp','label-rakumori-lp','label-rakumori-rp'].forEach(id => document.getElementById(id)?.classList.remove('hidden'));
 
   (hiddenByCourse[course] || []).forEach(id => document.getElementById(id)?.classList.add('hidden'));
-  document.getElementById('titleCourse').textContent = courseNames[course] || '';
+  const courseEl = document.getElementById('titleCourse');
+  courseEl.textContent = courseNames[course] || '';
+  // 文字数に応じてフォントサイズを自動縮小
+  const len = (courseNames[course] || '').length;
+  if (len <= 5) courseEl.style.fontSize = '12pt';
+  else if (len <= 8) courseEl.style.fontSize = '10pt';
+  else courseEl.style.fontSize = '8pt';
   if (window._applyData) window._applyData(course);
   setTimeout(() => { if (window.updateDivider) window.updateDivider(); }, 50);
 }
