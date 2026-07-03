@@ -176,6 +176,8 @@
 <body>
 
 <div class="no-print">
+  <label>日付：</label>
+  <select id="dateSelect" onchange="switchDate(this.value)"></select>
   <label>コース：</label>
   <select id="courseSelect" onchange="switchCourse(this.value)">
     <optgroup label="通常">
@@ -425,6 +427,40 @@ const dateKey = today.getFullYear() + '-'
   + String(today.getMonth()+1).padStart(2,'0') + '-'
   + String(today.getDate()).padStart(2,'0');
 
+// 日付プルダウンを生成（過去60日分）
+let currentDateKey = dateKey;
+(function initDateSelect() {
+  const sel = document.getElementById('dateSelect');
+  for (let i = 0; i < 60; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.getFullYear() + '-'
+      + String(d.getMonth()+1).padStart(2,'0') + '-'
+      + String(d.getDate()).padStart(2,'0');
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = key;
+    if (i === 0) opt.selected = true;
+    sel.appendChild(opt);
+  }
+})();
+
+window.switchDate = function(key) {
+  currentDateKey = key;
+  onValue(ref(db, `daily/${key}`), (snap) => {
+    currentData = snap.val();
+    const badge = document.getElementById('statusBadge');
+    if (!currentData) {
+      badge.textContent = 'データなし'; badge.className = 'status-badge status-draft';
+    } else if (currentData.status === 'confirmed') {
+      badge.textContent = '確定済み'; badge.className = 'status-badge status-confirmed';
+    } else {
+      badge.textContent = '未確定'; badge.className = 'status-badge status-draft';
+    }
+    applyData(currentCourse, currentData);
+  }, { onlyOnce: true });
+};
+
 const kanjiMonths    = ['睦月','如月','弥生','卯月','皐月','水無月','文月','葉月','長月','神無月','霜月','師走'];
 const kanjiMonthNums = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
 const kanjiDays      = ['','一','二','三','四','五','六','七','八','九','十',
@@ -530,7 +566,7 @@ function applyData(course, data) {
 let currentData = null;
 let currentCourse = 'yuki';
 
-onValue(ref(db, `daily/${dateKey}`), (snap) => {
+onValue(ref(db, `daily/${currentDateKey}`), (snap) => {
   currentData = snap.val();
   const badge = document.getElementById('statusBadge');
   if (!currentData) {

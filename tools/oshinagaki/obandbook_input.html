@@ -43,6 +43,8 @@
   .btn-copy:hover { background: #3e5c3e; }
   .btn-save   { background: #8b7355; color: #fff; }
   .btn-save:hover { background: #6e5a3e; }
+  .btn-history { background: #4a5568; color: #fff; font-size: 14px; padding: 10px 20px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; }
+  .btn-history:hover { background: #2d3748; }
   .btn-confirm { background: #2d6a2d; color: #fff; font-size: 14px; padding: 10px 24px; margin-left: auto; }
   .btn-confirm:hover { background: #1e4a1e; }
   .btn-confirm:disabled { background: #999; cursor: not-allowed; }
@@ -194,6 +196,7 @@
   <div class="action-bar">
     <button class="btn btn-copy" onclick="confirmCopyAll()">📋 全項目を下位コースにコピー</button>
     <button class="btn btn-save" onclick="saveData()">💾 一時保存</button>
+    <a class="btn btn-history" href="obandbook_print_v88.html" target="_blank">📅 過去の献立</a>
     <button class="btn btn-confirm" id="btnConfirm" onclick="confirmAll()">✅ 全ての献立を確定する</button>
     <button class="btn btn-reopen" id="btnReopen" onclick="reopenAll()" style="display:none;">✏️ 確定を解除して編集する</button>
     <span class="badge-printed" id="badgePrinted" style="display:none;"></span>
@@ -235,7 +238,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getDatabase, ref, set, get, remove, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBk4saCx38rdIL6ih0wDaQWjoxlGwjSpS8",
@@ -291,6 +294,22 @@ COURSES.forEach(c => { memData.courses[c] = {}; });
 
 let currentCourse = 'yuki';
 let isConfirmed = false;
+
+// 60日以上前のデータを自動削除
+(async function cleanOldData() {
+  try {
+    const rootSnap = await get(ref(db, 'daily'));
+    if (!rootSnap.exists()) return;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 60);
+    const cutoffKey = cutoff.toISOString().slice(0, 10);
+    const removes = [];
+    rootSnap.forEach(child => {
+      if (child.key < cutoffKey) removes.push(remove(ref(db, `daily/${child.key}`)));
+    });
+    await Promise.all(removes);
+  } catch(e) {}
+})();
 
 // Firebaseから読み込み（今日のデータがなければ前日分を引き継ぎ）
 const dataRef = ref(db, `daily/${dateKey}`);
