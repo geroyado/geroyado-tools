@@ -475,7 +475,7 @@ window.switchDate = async function(key) {
   // 確定データを最大7日前まで遡って検索
   let foundKey = null;
   let foundData = null;
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 60; i++) {
     const d = new Date(key);
     d.setDate(d.getDate() - i);
     const searchKey = d.getFullYear() + '-'
