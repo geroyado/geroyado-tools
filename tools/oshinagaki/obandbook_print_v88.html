@@ -457,8 +457,8 @@ window.switchDate = async function(key) {
     if (todayUnsubscribe) todayUnsubscribe();
     todayUnsubscribe = onValue(ref(db, `daily/${dateKey}`), async (snap) => {
       currentData = snap.val();
-      if (!currentData) {
-        // 当日データがない場合は遡り検索
+      if (!currentData || currentData.status !== 'confirmed') {
+        // 当日データがないかdraftの場合は遡り検索
         let foundKey = null; let foundData = null;
         for (let i = 1; i < 60; i++) {
           const p = dateKey.split('-');
@@ -469,16 +469,16 @@ window.switchDate = async function(key) {
           const data = s.val();
           if (data && data.status === 'confirmed') { foundKey = searchKey; foundData = data; break; }
         }
-        currentData = foundData;
-        if (!currentData) {
+        if (foundData) {
+          currentData = foundData;
+          badge.textContent = `確定済み（${foundKey}のデータ）`; badge.className = 'status-badge status-confirmed';
+        } else if (!currentData) {
           badge.textContent = 'データなし'; badge.className = 'status-badge status-draft';
         } else {
-          badge.textContent = `確定済み（${foundKey}のデータ）`; badge.className = 'status-badge status-confirmed';
+          badge.textContent = '未確定'; badge.className = 'status-badge status-draft';
         }
-      } else if (currentData.status === 'confirmed') {
-        badge.textContent = '確定済み'; badge.className = 'status-badge status-confirmed';
       } else {
-        badge.textContent = '未確定'; badge.className = 'status-badge status-draft';
+        badge.textContent = '確定済み'; badge.className = 'status-badge status-confirmed';
       }
       applyData(currentCourse, currentData);
     });
@@ -634,8 +634,8 @@ let currentCourse = 'yuki';
 todayUnsubscribe = onValue(ref(db, `daily/${currentDateKey}`), async (snap) => {
   currentData = snap.val();
   const badge = document.getElementById('statusBadge');
-  if (!currentData) {
-    // 当日データがない場合は遡り検索
+  if (!currentData || currentData.status !== 'confirmed') {
+    // 当日データがないかdraftの場合は遡り検索
     let foundKey = null; let foundData = null;
     for (let i = 1; i < 60; i++) {
       const parts1 = currentDateKey.split('-');
@@ -646,16 +646,16 @@ todayUnsubscribe = onValue(ref(db, `daily/${currentDateKey}`), async (snap) => {
       const data = s.val();
       if (data && data.status === 'confirmed') { foundKey = searchKey; foundData = data; break; }
     }
-    currentData = foundData;
-    if (!currentData) {
+    if (foundData) {
+      currentData = foundData;
+      badge.textContent = `確定済み（${foundKey}のデータ）`; badge.className = 'status-badge status-confirmed';
+    } else if (!currentData) {
       badge.textContent = 'データなし'; badge.className = 'status-badge status-draft';
     } else {
-      badge.textContent = `確定済み（${foundKey}のデータ）`; badge.className = 'status-badge status-confirmed';
+      badge.textContent = '未確定'; badge.className = 'status-badge status-draft';
     }
-  } else if (currentData.status === 'confirmed') {
-    badge.textContent = '確定済み'; badge.className = 'status-badge status-confirmed';
   } else {
-    badge.textContent = '未確定'; badge.className = 'status-badge status-draft';
+    badge.textContent = '確定済み'; badge.className = 'status-badge status-confirmed';
   }
   applyData(currentCourse, currentData);
 });
