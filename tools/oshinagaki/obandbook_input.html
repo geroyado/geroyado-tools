@@ -327,7 +327,7 @@ onValue(dataRef, async (snap) => {
     // 今日のデータがない場合、前日データを探して引き継ぎ
     isConfirmed = false;
     let inherited = false;
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 1; i <= 60; i++) {
       const prev = new Date(today);
       prev.setDate(prev.getDate() - i);
       const prevKey = prev.getFullYear() + '-'
