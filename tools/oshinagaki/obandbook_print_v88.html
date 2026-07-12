@@ -461,7 +461,9 @@ window.switchDate = async function(key) {
         // 当日データがない場合は遡り検索
         let foundKey = null; let foundData = null;
         for (let i = 1; i < 60; i++) {
-          const d = new Date(dateKey); d.setDate(d.getDate() - i);
+          const p = dateKey.split('-');
+          const d = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
+          d.setDate(d.getDate() - i);
           const searchKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
           const s = await new Promise(resolve => { onValue(ref(db, `daily/${searchKey}`), resolve, { onlyOnce: true }); });
           const data = s.val();
@@ -490,7 +492,8 @@ window.switchDate = async function(key) {
   let foundKey = null;
   let foundData = null;
   for (let i = 0; i < 60; i++) {
-    const d = new Date(key);
+    const parts3 = key.split('-');
+    const d = new Date(parseInt(parts3[0]), parseInt(parts3[1])-1, parseInt(parts3[2]));
     d.setDate(d.getDate() - i);
     const searchKey = d.getFullYear() + '-'
       + String(d.getMonth()+1).padStart(2,'0') + '-'
@@ -635,7 +638,9 @@ todayUnsubscribe = onValue(ref(db, `daily/${currentDateKey}`), async (snap) => {
     // 当日データがない場合は遡り検索
     let foundKey = null; let foundData = null;
     for (let i = 1; i < 60; i++) {
-      const d = new Date(currentDateKey); d.setDate(d.getDate() - i);
+      const parts1 = currentDateKey.split('-');
+      const d = new Date(parseInt(parts1[0]), parseInt(parts1[1])-1, parseInt(parts1[2]));
+      d.setDate(d.getDate() - i);
       const searchKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
       const s = await new Promise(resolve => { onValue(ref(db, `daily/${searchKey}`), resolve, { onlyOnce: true }); });
       const data = s.val();
