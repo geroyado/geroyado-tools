@@ -403,7 +403,8 @@ function renderForm(course) {
   const area = document.getElementById('formArea');
   area.innerHTML = '';
   const courseData = memData.courses[course] || {};
-  const genres = GENRES;
+  // 連泊コース（_2）は楽盛りを提供しないため、楽盛りカードは表示しない
+  const genres = GENRES.filter(g => !(g.isRaku && course.endsWith('_2')));
 
   genres.forEach(genre => {
     const card = document.createElement('div');

@@ -48,8 +48,8 @@
   }
   .row-oshinagaki { height: 105mm; vertical-align: top; }
 
-  .col-margin-l  { width: 12mm; }
-  .col-margin-r  { width: 11mm; }
+  .col-margin-l  { width: 9.75mm; }
+  .col-margin-r  { width: 8.75mm; }
   .col-footer-hotel { width: 8mm; }
   .col-footer-b  { width: 17mm; }
   .col-footer-a  { width: 19mm; }
@@ -62,7 +62,7 @@
   .col-dish-a    { width: 5mm; }
   .col-dish-b    { width: 8mm; }
   .col-det       { width: 4mm; }
-  .col-raku-item { width: 4mm; }
+  .col-raku-item { width: 4.5mm; }
 
   .inner-table {
     width: 297mm; height: 105mm;
@@ -227,6 +227,12 @@
             <!-- 空白（横線なし：フッターAとの境界） -->
             <td class="col-spacer label-cell label-cell-line"></td>
 
+            <!-- 料理11（旧・飛騨牛差替枠／連泊コースでは実際の最終品として使用。物理的に一番最後の位置） -->
+            <td class="col-lpad label-cell label-cell-line" id="label-hida-lp"></td>
+            <td class="col-det label-cell label-cell-line" id="label-hida-d2"></td>
+            <td class="col-det label-cell label-cell-line" id="label-hida-d1"></td>
+            <td class="col-dish-a label-cell label-cell-line" id="label-hida"><div class="label-inner"><span class="label-text"></span></div></td>
+            <td class="col-rpad label-cell label-cell-line" id="label-hida-rp"></td>
             <!-- 口直し -->
             <td class="col-lpad label-cell label-cell-line" id="label-kuchidori-lp"></td>
             <td class="col-det label-cell label-cell-line" id="label-kuchidori-d2"></td>
@@ -257,12 +263,6 @@
             <td class="col-det label-cell label-cell-line" id="label-shizakana-d1"></td>
             <td class="col-dish-a label-cell label-cell-line" id="label-shizakana"><div class="label-inner"><span class="label-text">強肴</span></div></td>
             <td class="col-rpad label-cell label-cell-line" id="label-shizakana-rp"></td>
-            <!-- 飛騨牛 -->
-            <td class="col-lpad label-cell hidden" id="label-hida-lp"></td>
-            <td class="col-det label-cell hidden" id="label-hida-d2"></td>
-            <td class="col-det label-cell hidden" id="label-hida-d1"></td>
-            <td class="col-dish-a label-cell hidden" id="label-hida"><div class="label-inner"><span class="label-text"></span></div></td>
-            <td class="col-rpad label-cell hidden" id="label-hida-rp"></td>
             <!-- 蓋物 -->
             <td class="col-lpad label-cell label-cell-line" id="label-futamono-lp"></td>
             <td class="col-det label-cell label-cell-line" id="label-futamono-d2"></td>
@@ -320,6 +320,11 @@
             <td class="col-margin-l"></td>
             <td class="col-spacer"></td>
             <!-- 口直し -->
+            <td class="col-lpad content-cell" id="col-hida-lp"></td>
+            <td class="col-det content-cell" id="col-hida-d2"><div class="content-inner"><span class="det" id="d-hida-d2"></span></div></td>
+            <td class="col-det content-cell" id="col-hida-d1"><div class="content-inner"><span class="det" id="d-hida-d1"></span></div></td>
+            <td class="col-dish-a content-cell" id="col-hida"><div class="content-inner"><span class="dish" id="d-hida"></span></div></td>
+            <td class="col-rpad content-cell" id="col-hida-rp"></td>
             <td class="col-lpad content-cell" id="col-kuchidori-lp"></td>
             <td class="col-det content-cell" id="col-kuchidori-d2"><div class="content-inner"><span class="det" id="d-kuchidori-d2"></span></div></td>
             <td class="col-det content-cell" id="col-kuchidori-d1"><div class="content-inner"><span class="det" id="d-kuchidori-d1"></span></div></td>
@@ -349,12 +354,6 @@
             <td class="col-det content-cell" id="col-shizakana-d1"><div class="content-inner"><span class="det" id="d-shizakana-d1"></span></div></td>
             <td class="col-dish-a content-cell" id="col-shizakana"><div class="content-inner"><span class="dish" id="d-shizakana"></span></div></td>
             <td class="col-rpad content-cell" id="col-shizakana-rp"></td>
-            <!-- 飛騨牛 -->
-            <td class="col-lpad content-cell hidden" id="col-hida-lp"></td>
-            <td class="col-det content-cell hidden" id="col-hida-d2"><div class="content-inner"><span class="det" id="d-hida-d2"></span></div></td>
-            <td class="col-det content-cell hidden" id="col-hida-d1"><div class="content-inner"><span class="det" id="d-hida-d1"></span></div></td>
-            <td class="col-dish-a content-cell hidden" id="col-hida"><div class="content-inner"><span class="dish" id="d-hida"></span></div></td>
-            <td class="col-rpad content-cell hidden" id="col-hida-rp"></td>
             <!-- 蓋物 -->
             <td class="col-lpad content-cell" id="col-futamono-lp"></td>
             <td class="col-det content-cell" id="col-futamono-d2"><div class="content-inner"><span class="det" id="d-futamono-d2"></span></div></td>
@@ -369,15 +368,15 @@
             <td class="col-rpad content-cell" id="col-yakimono-rp"></td>
             <!-- 楽盛り -->
             <td class="col-lpad content-cell" id="col-rakumori-lp"></td>
-            <td class="col-raku-item content-cell" id="col-raku-9"><div class="content-inner"><span class="det" id="d-raku-9"></span></div></td>
-            <td class="col-raku-item content-cell" id="col-raku-8"><div class="content-inner"><span class="det" id="d-raku-8"></span></div></td>
-            <td class="col-raku-item content-cell" id="col-raku-7"><div class="content-inner"><span class="det" id="d-raku-7"></span></div></td>
-            <td class="col-raku-item content-cell" id="col-raku-6"><div class="content-inner"><span class="det" id="d-raku-6"></span></div></td>
-            <td class="col-raku-item content-cell" id="col-raku-5"><div class="content-inner"><span class="det" id="d-raku-5"></span></div></td>
-            <td class="col-raku-item content-cell" id="col-raku-4"><div class="content-inner"><span class="det" id="d-raku-4"></span></div></td>
-            <td class="col-raku-item content-cell" id="col-raku-3"><div class="content-inner"><span class="det" id="d-raku-3"></span></div></td>
-            <td class="col-raku-item content-cell" id="col-raku-2"><div class="content-inner"><span class="det" id="d-raku-2"></span></div></td>
-            <td class="col-raku-item content-cell" id="col-raku-1"><div class="content-inner"><span class="det" id="d-raku-1"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-9"><div class="content-inner"><span class="dish" id="d-raku-9"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-8"><div class="content-inner"><span class="dish" id="d-raku-8"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-7"><div class="content-inner"><span class="dish" id="d-raku-7"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-6"><div class="content-inner"><span class="dish" id="d-raku-6"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-5"><div class="content-inner"><span class="dish" id="d-raku-5"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-4"><div class="content-inner"><span class="dish" id="d-raku-4"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-3"><div class="content-inner"><span class="dish" id="d-raku-3"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-2"><div class="content-inner"><span class="dish" id="d-raku-2"></span></div></td>
+            <td class="col-raku-item content-cell" id="col-raku-1"><div class="content-inner"><span class="dish" id="d-raku-1"></span></div></td>
             <td class="col-rpad content-cell" id="col-rakumori-rp"></td>
             <!-- 造里 -->
             <td class="col-lpad content-cell" id="col-tsukuri-lp"></td>
@@ -606,7 +605,7 @@ function applyData(course, data) {
   });
 
   // 空の楽盛り列を非表示にして左余白に加算
-  const rakuItemWidth = 4; // mm
+  const rakuItemWidth = 4.5; // mm
   let hiddenRakuCount = 0;
   for (let i = 1; i <= 9; i++) {
     const el1 = document.getElementById(`col-raku-${i}`);
@@ -625,7 +624,7 @@ function applyData(course, data) {
   // 非表示になった列分を左余白に加算
   const marginL = document.querySelectorAll('.col-margin-l');
   const extraMm = hiddenRakuCount * rakuItemWidth;
-  marginL.forEach(el => { el.style.width = (12 + extraMm) + 'mm'; });
+  marginL.forEach(el => { el.style.width = (9.75 + extraMm) + 'mm'; });
 }
 
 let currentData = null;
@@ -701,6 +700,14 @@ function switchCourse(course) {
   ['col-rakumori-lp','col-rakumori-rp','label-rakumori-lp','label-rakumori-rp'].forEach(id => document.getElementById(id)?.classList.remove('hidden'));
 
   (hiddenByCourse[course] || []).forEach(id => document.getElementById(id)?.classList.add('hidden'));
+
+  // 連泊コース（_2）は楽盛りを提供しないため、楽盛り列を常に非表示にする
+  const isRenpaku = course.endsWith('_2');
+  if (isRenpaku) {
+    for (let i = 1; i <= 9; i++) [`col-raku-${i}`, `label-raku-${i}`].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+    ['col-rakumori-lp','col-rakumori-rp','label-rakumori-lp','label-rakumori-rp'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+  }
+
   const courseEl = document.getElementById('titleCourse');
   courseEl.textContent = courseNames[course] || '';
   // 文字数に応じてフォントサイズを自動縮小
