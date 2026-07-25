@@ -549,6 +549,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, orderBy, query, where, serverTimestamp, setDoc }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 // ───────────────────────────────────────
 // State
@@ -571,6 +572,8 @@ async function initFirebase() {
   try {
     const app = initializeApp(FIREBASE_CONFIG, 'fleet');
     db = getFirestore(app);
+    const auth = getAuth(app);
+    await signInAnonymously(auth);
     document.getElementById('connectionStatus').textContent = '接続済み';
     document.getElementById('connectionStatus').style.color = 'var(--c-success)';
     return true;
