@@ -484,7 +484,10 @@
 
   // お品書き確定状況チェック（リアルタイム監視）
   import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js').then(({ initializeApp }) => {
-    import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js').then(({ getDatabase, ref, onValue }) => {
+    Promise.all([
+      import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js'),
+      import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js')
+    ]).then(([{ getDatabase, ref, onValue }, { getAuth, signInAnonymously }]) => {
       const firebaseConfig = {
         apiKey: "AIzaSyBk4saCx38rdIL6ih0wDaQWjoxlGwjSpS8",
         authDomain: "geroyado-oshinagaki.firebaseapp.com",
@@ -497,6 +500,12 @@
       try {
         const app = initializeApp(firebaseConfig, 'oshinagaki-index');
         const db = getDatabase(app);
+        const auth = getAuth(app);
+
+        // 匿名認証（未認証だと印刷完了の書き込みが401になるため）
+        signInAnonymously(auth).catch((e) => console.warn('匿名認証エラー:', e));
+        window._oshinagakiAuth = auth; // markPrinted()から参照
+
         const today = new Date();
         const dateKey = today.getFullYear() + '-'
           + String(today.getMonth()+1).padStart(2,'0') + '-'
@@ -524,18 +533,27 @@
     if (!confirm('印刷完了としてよいですか？')) return;
     (async function() {
       try {
+        const auth = window._oshinagakiAuth;
+        const user = auth && auth.currentUser;
+        if (!user) {
+          alert('認証準備中です。数秒待ってからもう一度お試しください。');
+          return;
+        }
+        const idToken = await user.getIdToken();
         const today2 = new Date();
         const dk = today2.getFullYear() + '-'
           + String(today2.getMonth()+1).padStart(2,'0') + '-'
           + String(today2.getDate()).padStart(2,'0');
         const DB_URL = 'https://geroyado-oshinagaki-default-rtdb.asia-southeast1.firebasedatabase.app';
-        const res = await fetch(`${DB_URL}/daily/${dk}/printed_at.json`, {
+        const res = await fetch(`${DB_URL}/daily/${dk}/printed_at.json?auth=${idToken}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(new Date().toISOString())
         });
         if (res.ok) {
           document.getElementById('oshinagaki-alert').style.display = 'none';
+        } else {
+          console.warn('印刷完了の保存に失敗:', res.status);
         }
       } catch(e) {
         console.warn('印刷完了の保存に失敗:', e);
