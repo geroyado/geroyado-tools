@@ -356,11 +356,14 @@ const msgStatusEl = document.getElementById('messageStatus');
 let msgLocalEdit = false;
 let msgSaveTimer = null;
 
-onValue(ref(db, 'board_message'), snap => {
+onValue(ref(db, 'rooms/_board/message'), snap => {
   const val = snap.val() || '';
   if (!msgLocalEdit && document.activeElement !== msgEl) {
     msgEl.value = val;
   }
+}, () => {
+  msgStatusEl.textContent = '読み込みエラー';
+  msgStatusEl.className = 'message-status';
 });
 
 msgEl.addEventListener('focus', () => { msgLocalEdit = true; });
@@ -369,9 +372,12 @@ msgEl.addEventListener('input', () => {
   msgStatusEl.className = 'message-status';
   clearTimeout(msgSaveTimer);
   msgSaveTimer = setTimeout(() => {
-    update(ref(db), { board_message: msgEl.value }).then(() => {
+    update(ref(db, 'rooms/_board'), { message: msgEl.value }).then(() => {
       msgStatusEl.textContent = '保存しました';
       msgStatusEl.className = 'message-status saved';
+    }).catch(() => {
+      msgStatusEl.textContent = '保存に失敗しました（権限エラーの可能性）';
+      msgStatusEl.className = 'message-status';
     });
   }, 600);
 });

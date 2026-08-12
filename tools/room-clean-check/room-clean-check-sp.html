@@ -144,6 +144,17 @@ html, body { width: 100%; min-height: 100%; background: #F5F5F5; font-family: 'H
   border-radius: 12px; cursor: pointer; border: none;
   background: #F0F0F0; color: #666;
 }
+
+.message-box {
+  margin-top: 20px; background: #fff; border-radius: 12px;
+  border: 1px solid #E0E0E0; padding: 14px 16px;
+}
+.message-label { font-size: 12px; font-weight: 700; color: #888; margin-bottom: 8px; letter-spacing: 0.03em; }
+.message-content {
+  font-size: 17px; line-height: 1.8; color: #333;
+  white-space: pre-wrap; word-break: break-word;
+}
+.message-content.empty { color: #BBB; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -183,6 +194,11 @@ html, body { width: 100%; min-height: 100%; background: #F5F5F5; font-family: 'H
     確認待ちの部屋はありません
   </div>
 
+  <div class="message-box">
+    <div class="message-label">メッセージ欄</div>
+    <div class="message-content empty" id="messageContent">連絡事項はありません</div>
+  </div>
+
 </div>
 
 <div class="overlay" id="overlay">
@@ -212,6 +228,21 @@ const app  = initializeApp(firebaseConfig);
 const db   = getDatabase(app);
 const auth = getAuth(app);
 signInAnonymously(auth);
+
+const msgContentEl = document.getElementById('messageContent');
+onValue(ref(db, 'rooms/_board/message'), snap => {
+  const val = snap.val() || '';
+  if (val.trim() === '') {
+    msgContentEl.textContent = '連絡事項はありません';
+    msgContentEl.classList.add('empty');
+  } else {
+    msgContentEl.textContent = val;
+    msgContentEl.classList.remove('empty');
+  }
+}, () => {
+  msgContentEl.textContent = '読み込みエラーが発生しました';
+  msgContentEl.classList.add('empty');
+});
 
 const FLOORS = [
   { label: '4階', rooms: ['401','402','403','405','sep','406','407','408','410','411','412'] },
