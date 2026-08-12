@@ -56,10 +56,11 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
   background: #E8E8E8;
   padding: 8px 4px;
   display: flex; flex-direction: column;
-  align-items: center; gap: 3px;
+  align-items: center; gap: 4px;
   position: relative; user-select: none;
   aspect-ratio: 1 / 1; justify-content: center;
 }
+.room-col { flex: 1; display: flex; flex-direction: column; gap: 3px; }
 .room-card.s-waiting { border-color: #FF9800; background: #FFF3E0; cursor: pointer; }
 .room-card.s-waiting:active { filter: brightness(0.93); transform: scale(0.96); }
 .room-card.s-out     { border-color: #FFCC80; background: #FFF8E1; cursor: pointer; }
@@ -261,20 +262,9 @@ function makeCard(r) {
   else if (cs === 'done') { badge.textContent = '確認済み'; badge.style.display = ''; }
   else { badge.style.display = 'none'; }
 
-  const ozoneStrip = document.createElement('div');
-  const ozoneActive = state[r].ozone_status === 'waiting';
-  ozoneStrip.className = 'ozone-strip' + (ozoneActive ? ' active' : '');
-  ozoneStrip.textContent = ozoneActive ? '🌀依頼中' : 'オゾン';
-  ozoneStrip.title = ozoneActive ? 'オゾン依頼中（タップで取消）' : 'オゾン依頼';
-  ozoneStrip.addEventListener('click', (e) => {
-    e.stopPropagation();
-    update(ref(db, 'rooms/' + r), { ozone_status: ozoneActive ? '' : 'waiting' });
-  });
-
   card.appendChild(waitMark);
   card.appendChild(doneMark);
   card.appendChild(numEl);
-  card.appendChild(ozoneStrip);
   card.appendChild(badge);
 
   // クリックでローテーション（out/unused→waiting→done→元に戻す）
@@ -293,6 +283,27 @@ function makeCard(r) {
   }
 
   return card;
+}
+
+function makeOzoneStrip(r) {
+  const ozoneStrip = document.createElement('div');
+  const ozoneActive = state[r].ozone_status === 'waiting';
+  ozoneStrip.className = 'ozone-strip' + (ozoneActive ? ' active' : '');
+  ozoneStrip.textContent = ozoneActive ? '🌀依頼中' : 'オゾン';
+  ozoneStrip.title = ozoneActive ? 'オゾン依頼中（タップで取消）' : 'オゾン依頼';
+  ozoneStrip.addEventListener('click', (e) => {
+    e.stopPropagation();
+    update(ref(db, 'rooms/' + r), { ozone_status: ozoneActive ? '' : 'waiting' });
+  });
+  return ozoneStrip;
+}
+
+function makeRoomCol(r) {
+  const col = document.createElement('div');
+  col.className = 'room-col';
+  col.appendChild(makeCard(r));
+  col.appendChild(makeOzoneStrip(r));
+  return col;
 }
 
 function renderAll() {
@@ -314,7 +325,7 @@ function renderAll() {
         blank.className = 'room-blank';
         rowEl.appendChild(blank);
       } else {
-        rowEl.appendChild(makeCard(r));
+        rowEl.appendChild(makeRoomCol(r));
       }
     });
     floorDiv.appendChild(rowEl);
