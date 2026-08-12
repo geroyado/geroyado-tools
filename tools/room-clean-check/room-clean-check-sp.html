@@ -98,6 +98,25 @@ html, body { width: 100%; min-height: 100%; background: #F5F5F5; font-family: 'H
 }
 .empty-icon { font-size: 52px; margin-bottom: 12px; }
 
+/* オゾン回収セクション */
+.ozone-section { margin-bottom: 20px; }
+.ozone-section-title {
+  font-size: 12px; font-weight: 700; color: #6A1B9A;
+  margin-bottom: 8px; letter-spacing: 0.03em;
+}
+.ozone-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.ozone-card {
+  flex: 1 1 calc(33.33% - 6px); min-width: 86px;
+  border-radius: 12px; border: 2px solid #CE93D8; background: #F3E5F5;
+  padding: 12px 4px; text-align: center; cursor: pointer; user-select: none;
+  transition: transform 0.08s, opacity 0.15s;
+}
+.ozone-card:active { transform: scale(0.94); background: #E1BEE7; }
+.ozone-card.removing { opacity: 0; transform: scale(0.85); }
+.ozone-room { font-size: 16px; font-weight: 700; color: #6A1B9A; }
+.ozone-room.small { font-size: 12px; }
+.ozone-hint { font-size: 9px; color: #8E24AA; margin-top: 3px; }
+
 /* 確認ダイアログ */
 .overlay {
   display: none; position: fixed; inset: 0;
@@ -152,6 +171,11 @@ html, body { width: 100%; min-height: 100%; background: #F5F5F5; font-family: 'H
     確認済みにする操作のみできます。
   </div>
 
+  <div id="ozoneSection" class="ozone-section" style="display:none;">
+    <div class="ozone-section-title">🌀 オゾン回収待ち</div>
+    <div class="ozone-list" id="ozoneList"></div>
+  </div>
+
   <div id="floors"></div>
 
   <div id="emptyState" class="empty-state" style="display:none;">
@@ -198,7 +222,7 @@ const allRooms = [];
 FLOORS.forEach(f => f.rooms.forEach(r => { if(r !== 'sep' && r !== 'blank') allRooms.push(r); }));
 
 const state = {};
-allRooms.forEach(r => { state[r] = { clean_status: '' }; });
+allRooms.forEach(r => { state[r] = { clean_status: '', ozone_status: '' }; });
 
 let pendingRoom = null;
 const syncEl = document.getElementById('syncStatus');
@@ -207,6 +231,7 @@ onValue(ref(db, 'rooms'), snap => {
   const data = snap.val() || {};
   allRooms.forEach(r => {
     state[r].clean_status = data[r]?.clean_status || '';
+    state[r].ozone_status = data[r]?.ozone_status || '';
   });
   renderAll();
   syncEl.textContent = '● 同期中';
@@ -224,14 +249,52 @@ function updateCounters() {
   return { waiting, done };
 }
 
+function renderOzone() {
+  const ozoneRooms = allRooms.filter(r => state[r].ozone_status === 'waiting');
+  const section = document.getElementById('ozoneSection');
+  const list = document.getElementById('ozoneList');
+
+  if (ozoneRooms.length === 0) {
+    section.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+  section.style.display = '';
+  list.innerHTML = '';
+  ozoneRooms.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'ozone-card';
+
+    const numEl = document.createElement('div');
+    numEl.className = 'ozone-room' + (r === 'cabin' ? ' small' : '');
+    numEl.textContent = r === 'cabin' ? 'キャビン' : r;
+
+    const hintEl = document.createElement('div');
+    hintEl.className = 'ozone-hint';
+    hintEl.textContent = 'タップで回収済み';
+
+    card.appendChild(numEl);
+    card.appendChild(hintEl);
+
+    card.addEventListener('click', () => {
+      card.classList.add('removing');
+      update(ref(db, 'rooms/' + r), { ozone_status: '' });
+    });
+
+    list.appendChild(card);
+  });
+}
+
 function renderAll() {
   const { waiting, done } = updateCounters();
+  renderOzone();
   const container = document.getElementById('floors');
   const emptyState = document.getElementById('emptyState');
+  const hasOzone = allRooms.some(r => state[r].ozone_status === 'waiting');
 
   if (waiting === 0 && done === 0) {
     container.innerHTML = '';
-    emptyState.style.display = '';
+    emptyState.style.display = hasOzone ? 'none' : '';
     return;
   }
   emptyState.style.display = 'none';
