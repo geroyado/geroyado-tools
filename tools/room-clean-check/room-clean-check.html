@@ -98,6 +98,18 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
   background: #F3E5F5; color: #6A1B9A; border-color: #CE93D8;
 }
 
+.message-box { margin-top: 18px; }
+.message-label { font-size: 12px; font-weight: 600; color: #888; margin-bottom: 6px; letter-spacing: 0.03em; }
+.message-textarea {
+  width: 100%; min-height: 90px; resize: vertical;
+  border: 1.5px solid #DDD; border-radius: 8px;
+  padding: 10px 12px; font-size: 15px; line-height: 1.6;
+  font-family: inherit; color: #333; background: #fff;
+}
+.message-textarea:focus { outline: none; border-color: #B85C00; }
+.message-status { font-size: 10px; color: #AAA; margin-top: 4px; text-align: right; }
+.message-status.saved { color: #00A040; }
+
 /* QRモーダル */
 .qr-overlay {
   display: none; position: fixed; inset: 0;
@@ -155,6 +167,12 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
     </div>
 
     <div id="floors"></div>
+
+    <div class="message-box">
+      <div class="message-label">メッセージ欄</div>
+      <textarea class="message-textarea" id="messageText" placeholder="連絡事項があれば入力してください（スマホ側にも表示されます）"></textarea>
+      <div class="message-status" id="messageStatus"></div>
+    </div>
   </div>
 </div>
 
@@ -332,6 +350,32 @@ function renderAll() {
     container.appendChild(floorDiv);
   });
 }
+
+const msgEl = document.getElementById('messageText');
+const msgStatusEl = document.getElementById('messageStatus');
+let msgLocalEdit = false;
+let msgSaveTimer = null;
+
+onValue(ref(db, 'board_message'), snap => {
+  const val = snap.val() || '';
+  if (!msgLocalEdit && document.activeElement !== msgEl) {
+    msgEl.value = val;
+  }
+});
+
+msgEl.addEventListener('focus', () => { msgLocalEdit = true; });
+msgEl.addEventListener('input', () => {
+  msgStatusEl.textContent = '入力中…';
+  msgStatusEl.className = 'message-status';
+  clearTimeout(msgSaveTimer);
+  msgSaveTimer = setTimeout(() => {
+    update(ref(db), { board_message: msgEl.value }).then(() => {
+      msgStatusEl.textContent = '保存しました';
+      msgStatusEl.className = 'message-status saved';
+    });
+  }, 600);
+});
+msgEl.addEventListener('blur', () => { msgLocalEdit = false; });
 
 document.getElementById('btnQR').addEventListener('click', () => {
   document.getElementById('qrOverlay').classList.add('open');
