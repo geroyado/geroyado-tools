@@ -56,7 +56,7 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
   background: #E8E8E8;
   padding: 8px 4px;
   display: flex; flex-direction: column;
-  align-items: center; gap: 4px;
+  align-items: center; gap: 3px;
   position: relative; user-select: none;
   aspect-ratio: 1 / 1; justify-content: center;
 }
@@ -85,16 +85,15 @@ html, body { width: 100%; min-height: 100%; background: #f4f2ed; font-family: 'H
 .wait-mark { position: absolute; top: 3px; right: 4px; font-size: 9px; }
 .done-mark { position: absolute; top: 3px; right: 4px; font-size: 10px; color: #2E7D32; font-weight: 700; }
 
-.ozone-btn {
-  position: absolute; bottom: 3px; right: 4px;
-  width: 18px; height: 18px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; line-height: 1;
-  background: #E8E8E8; color: #AAA; border: 1px solid #D5D5D5;
+.ozone-strip {
+  width: 100%; text-align: center;
+  font-size: 8px; font-weight: 600; letter-spacing: 0.03em;
+  padding: 2px 0; border-radius: 4px;
+  background: #ECECEC; color: #AAA; border: 1px solid #DDD;
   cursor: pointer; user-select: none;
 }
-.ozone-btn:active { filter: brightness(0.92); transform: scale(0.92); }
-.ozone-btn.active {
+.ozone-strip:active { filter: brightness(0.94); transform: scale(0.97); }
+.ozone-strip.active {
   background: #F3E5F5; color: #6A1B9A; border-color: #CE93D8;
 }
 
@@ -262,12 +261,12 @@ function makeCard(r) {
   else if (cs === 'done') { badge.textContent = '確認済み'; badge.style.display = ''; }
   else { badge.style.display = 'none'; }
 
-  const ozoneBtn = document.createElement('div');
+  const ozoneStrip = document.createElement('div');
   const ozoneActive = state[r].ozone_status === 'waiting';
-  ozoneBtn.className = 'ozone-btn' + (ozoneActive ? ' active' : '');
-  ozoneBtn.textContent = '🌀';
-  ozoneBtn.title = ozoneActive ? 'オゾン依頼中（タップで取消）' : 'オゾン依頼';
-  ozoneBtn.addEventListener('click', (e) => {
+  ozoneStrip.className = 'ozone-strip' + (ozoneActive ? ' active' : '');
+  ozoneStrip.textContent = ozoneActive ? '🌀依頼中' : 'オゾン';
+  ozoneStrip.title = ozoneActive ? 'オゾン依頼中（タップで取消）' : 'オゾン依頼';
+  ozoneStrip.addEventListener('click', (e) => {
     e.stopPropagation();
     update(ref(db, 'rooms/' + r), { ozone_status: ozoneActive ? '' : 'waiting' });
   });
@@ -275,8 +274,8 @@ function makeCard(r) {
   card.appendChild(waitMark);
   card.appendChild(doneMark);
   card.appendChild(numEl);
+  card.appendChild(ozoneStrip);
   card.appendChild(badge);
-  card.appendChild(ozoneBtn);
 
   // クリックでローテーション（out/unused→waiting→done→元に戻す）
   if (cs === 'out' || cs === 'other') {
