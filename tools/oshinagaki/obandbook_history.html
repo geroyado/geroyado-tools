@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>保存履歴（ログ追跡） — 下呂観光ホテル</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Yu Gothic", "游ゴシック", sans-serif;
+    background: #f5f2ee; color: #222; font-size: 14px;
+  }
+  .header {
+    background: #3a2e24; color: #e8ddd0;
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .header h1 { font-size: 16px; font-weight: bold; letter-spacing: 0.05em; }
+  .container { max-width: 720px; margin: 0 auto; padding: 20px 16px; }
+
+  .panel {
+    background: #fff; border-radius: 8px; padding: 16px 20px;
+    margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+  .panel h2 { font-size: 14px; margin-bottom: 10px; color: #3a2e24; }
+  .note { font-size: 12px; color: #888; line-height: 1.6; margin-bottom: 12px; }
+
+  select {
+    padding: 6px 10px; border-radius: 5px; border: 1px solid #ccc;
+    font-size: 14px; font-family: inherit;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid #eee; text-align: left; }
+  th { background: #efe9e1; color: #555; font-weight: bold; }
+  tr:last-child td { border-bottom: none; }
+
+  .uid-chip {
+    display: inline-block; background: #efe9e1; color: #6e5a3e;
+    padding: 1px 8px; border-radius: 3px; font-family: monospace; font-size: 12px;
+  }
+  .nick-input {
+    padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px;
+    font-size: 13px; font-family: inherit; width: 140px;
+  }
+  .empty { color: #888; padding: 12px 0; }
+  .summary { font-size: 12px; color: #666; margin: 8px 0 4px; }
+  .device-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .device-row .count { font-size: 12px; color: #888; }
+
+  /* PINロック画面 */
+  #lockOverlay {
+    position: fixed; inset: 0; background: #3a2e24;
+    display: flex; align-items: center; justify-content: center; z-index: 999;
+  }
+  .lock-box {
+    background: #fff; border-radius: 10px; padding: 32px 36px;
+    max-width: 300px; width: 90%; text-align: center;
+  }
+  .lock-box h2 { font-size: 15px; margin-bottom: 16px; color: #3a2e24; }
+  #pinInput {
+    width: 100%; padding: 10px; font-size: 20px; text-align: center;
+    letter-spacing: 0.4em; border: 1px solid #ccc; border-radius: 6px;
+    margin-bottom: 12px;
+  }
+  .lock-box button {
+    width: 100%; padding: 10px; border: none; border-radius: 6px;
+    background: #3a2e24; color: #fff; font-weight: bold; font-size: 14px;
+    cursor: pointer;
+  }
+  #lockError { color: #a33; font-size: 12px; margin-top: 8px; min-height: 16px; }
+</style>
+</head>
+<body>
+
+<!-- PINロック画面：正しい4桁が入力されるまで、下のコンテンツは操作できません -->
+<div id="lockOverlay">
+  <div class="lock-box">
+    <h2>🔒 暗証番号を入力してください</h2>
+    <input type="password" id="pinInput" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+    <button onclick="checkPin()">開く</button>
+    <div id="lockError"></div>
+  </div>
+</div>
+
+<div class="header">
+  <h1>🕒 保存履歴（ログ追跡）</h1>
+</div>
+
+<div class="container">
+
+  <div class="panel">
+    <h2>対象日</h2>
+    <div class="note">
+      この画面は、お品書き入力ページの保存操作（一時保存・確定・確定解除・コピーに伴う保存）が
+      「いつ」「どの端末から」行われたかを確認するための、トラブル調査専用ツールです。
+      保存された内容そのものは記録されていません。
+    </div>
+    <select id="dateSelect" onchange="loadHistory(this.value)"></select>
+  </div>
+
+  <div class="panel">
+    <h2>この日に登場した端末</h2>
+    <div class="note">
+      端末の見分けがつくよう、任意でニックネームを付けられます（この操作をしているブラウザにのみ保存され、他の人には共有されません）。
+    </div>
+    <div id="deviceList"></div>
+  </div>
+
+  <div class="panel">
+    <h2>保存の記録（時系列）</h2>
+    <div id="summary" class="summary"></div>
+    <div id="tableArea"></div>
+  </div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, get } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+// ==========================================================
+// 🔒 ここに実際の4桁の暗証番号を設定してください（配置前に必ず変更してください）
+const CORRECT_PIN = '0034';
+// ==========================================================
+
+const UNLOCK_KEY = 'obandbook_history_unlocked';
+
+window.checkPin = function() {
+  const input = document.getElementById('pinInput');
+  const err = document.getElementById('lockError');
+  if (input.value === CORRECT_PIN) {
+    sessionStorage.setItem(UNLOCK_KEY, '1');
+    document.getElementById('lockOverlay').style.display = 'none';
+  } else {
+    err.textContent = '暗証番号が違います';
+    input.value = '';
+    input.focus();
+  }
+};
+
+document.getElementById('pinInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') checkPin();
+});
+
+// 同じブラウザ・同じタブでは、一度解除すれば再入力不要
+if (sessionStorage.getItem(UNLOCK_KEY) === '1') {
+  document.getElementById('lockOverlay').style.display = 'none';
+} else {
+  document.getElementById('pinInput').focus();
+}
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBk4saCx38rdIL6ih0wDaQWjoxlGwjSpS8",
+  authDomain: "geroyado-oshinagaki.firebaseapp.com",
+  databaseURL: "https://geroyado-oshinagaki-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "geroyado-oshinagaki",
+  storageBucket: "geroyado-oshinagaki.firebasestorage.app",
+  messagingSenderId: "389593436209",
+  appId: "1:389593436209:web:40b819f3e0b9821aed0510"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+const auth = getAuth(app);
+// 読み取りだけの画面だが、セキュリティルールの設定によらず読めるよう念のため認証しておく
+await signInAnonymously(auth).catch((e) => console.error('匿名認証エラー:', e));
+
+const today = new Date();
+const dateKey = today.getFullYear() + '-'
+  + String(today.getMonth()+1).padStart(2,'0') + '-'
+  + String(today.getDate()).padStart(2,'0');
+
+// 日付プルダウンを生成（過去10日分。
+// トラブル対応は24時間以内が前提のため、実用上はこの範囲で十分という判断。
+// なお、historyデータ自体は自動削除していないため、Firebaseコンソールで直接見れば
+// 10日より前の記録も別途確認は可能）
+(function initDateSelect() {
+  const sel = document.getElementById('dateSelect');
+  for (let i = 0; i < 10; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.getFullYear() + '-'
+      + String(d.getMonth()+1).padStart(2,'0') + '-'
+      + String(d.getDate()).padStart(2,'0');
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = key + (i === 0 ? '（本日）' : '');
+    if (i === 0) opt.selected = true;
+    sel.appendChild(opt);
+  }
+})();
+
+function nickKey(uid) { return `obandbook_nick_${uid}`; }
+function getNick(uid) { return localStorage.getItem(nickKey(uid)) || ''; }
+function setNick(uid, val) {
+  if (val) localStorage.setItem(nickKey(uid), val);
+  else localStorage.removeItem(nickKey(uid));
+}
+
+let currentRows = [];
+
+window.loadHistory = async function(key) {
+  const tableArea = document.getElementById('tableArea');
+  const summary = document.getElementById('summary');
+  const deviceList = document.getElementById('deviceList');
+  tableArea.innerHTML = '<div class="empty">読み込み中…</div>';
+  summary.textContent = '';
+  deviceList.innerHTML = '';
+
+  let snap;
+  try {
+    snap = await get(ref(db, `history/${key}`));
+  } catch (e) {
+    tableArea.innerHTML = `<div class="empty">読み込みに失敗しました（${e.message || e}）。<br>Firebaseのセキュリティルールで /history の読み取りが許可されているかご確認ください。</div>`;
+    return;
+  }
+
+  if (!snap.exists()) {
+    tableArea.innerHTML = '<div class="empty">この日の保存記録は見つかりませんでした。</div>';
+    currentRows = [];
+    return;
+  }
+
+  const rows = [];
+  snap.forEach(child => {
+    const v = child.val();
+    rows.push({ savedAt: v.savedAt, savedBy: v.savedBy || '(不明)' });
+  });
+  rows.sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0));
+  currentRows = rows;
+
+  summary.textContent = `この日の保存回数：${rows.length}回`;
+  renderDeviceList(rows);
+  renderTable(rows);
+};
+
+function renderDeviceList(rows) {
+  const deviceList = document.getElementById('deviceList');
+  deviceList.innerHTML = '';
+  if (rows.length === 0) {
+    deviceList.innerHTML = '<div class="empty">この日は端末の登場がありません。</div>';
+    return;
+  }
+  const counts = {};
+  rows.forEach(r => { counts[r.savedBy] = (counts[r.savedBy] || 0) + 1; });
+  Object.keys(counts).forEach(uid => {
+    const row = document.createElement('div');
+    row.className = 'device-row';
+    const chip = document.createElement('span');
+    chip.className = 'uid-chip';
+    chip.textContent = uid.slice(0, 10) + (uid.length > 10 ? '…' : '');
+    row.appendChild(chip);
+
+    const input = document.createElement('input');
+    input.className = 'nick-input';
+    input.placeholder = 'ニックネーム（例：調理長PC）';
+    input.value = getNick(uid);
+    input.addEventListener('input', () => {
+      setNick(uid, input.value.trim());
+      renderTable(currentRows);
+    });
+    row.appendChild(input);
+
+    const count = document.createElement('span');
+    count.className = 'count';
+    count.textContent = `${counts[uid]}回保存`;
+    row.appendChild(count);
+
+    deviceList.appendChild(row);
+  });
+}
+
+function renderTable(rows) {
+  const tableArea = document.getElementById('tableArea');
+  if (rows.length === 0) {
+    tableArea.innerHTML = '<div class="empty">この日の保存記録は見つかりませんでした。</div>';
+    return;
+  }
+  const table = document.createElement('table');
+  table.innerHTML = `
+    <thead><tr><th>時刻</th><th>端末</th></tr></thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const timeStr = r.savedAt
+      ? new Date(r.savedAt).toLocaleString('ja-JP', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+      : '(時刻不明)';
+    const nick = getNick(r.savedBy);
+    const label = nick ? `${nick}（${r.savedBy.slice(0,6)}…）` : r.savedBy.slice(0, 10) + (r.savedBy.length > 10 ? '…' : '');
+    tr.innerHTML = `<td>${timeStr}</td><td>${label}</td>`;
+    tbody.appendChild(tr);
+  });
+  tableArea.innerHTML = '';
+  tableArea.appendChild(table);
+}
+
+// 初期表示（本日分）
+loadHistory(dateKey);
+</script>
+</body>
+</html>
