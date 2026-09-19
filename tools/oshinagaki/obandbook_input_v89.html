@@ -250,7 +250,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, set, get, remove, onValue, push, ServerValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getDatabase, ref, set, get, remove, onValue, push } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
@@ -640,7 +640,7 @@ function countContent(data) {
 async function logSaveHistory() {
   try {
     await push(ref(db, `history/${dateKey}`), {
-      savedAt: ServerValue.TIMESTAMP,
+      savedAt: Date.now(),
       savedBy: currentUid
     });
   } catch (e) {
