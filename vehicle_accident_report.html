@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>車両事故報告</title>
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--ink:#222;--sub:#666;--line:#d9d6cf;--accent:#2f5d8a;--accent-ink:#fff;--err:#b3261e;--ok:#2e6b3a;--note:#eef3f8}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif;font-size:16px;line-height:1.6}
+main{max-width:720px;margin:0 auto;padding:16px 16px 48px}
+.back{display:inline-block;color:var(--accent);text-decoration:none;font-size:.9rem;margin-bottom:4px}
+h1{font-size:1.4rem;margin:8px 0 4px}
+.lead{color:var(--sub);font-size:.9rem;margin:0 0 16px}
+.notice{background:var(--note);border-left:4px solid var(--accent);padding:12px 14px;border-radius:6px;font-size:.92rem;margin-bottom:20px}
+fieldset{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px 6px;margin:0 0 16px}
+legend{font-weight:700;padding:0 6px;font-size:1.05rem}
+label.f{display:block;margin:0 0 14px}
+label.f>span{display:block;font-size:.92rem;font-weight:600;margin-bottom:4px}
+.req{color:var(--err);font-size:.8rem;margin-left:4px;font-weight:400}
+.hint,label.f>span.hint{display:block;color:var(--sub);font-size:.82rem;font-weight:400;margin:4px 0 0}
+input[type=text],input[type=date],input[type=time],input[type=email],select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+textarea{min-height:76px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.group{margin:0 0 14px}
+.group>span{display:block;font-size:.92rem;font-weight:600;margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:#fff;font-size:.92rem;cursor:pointer}
+.chips input{accent-color:var(--accent)}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.thumbs img{width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+button{font:inherit;border-radius:8px;padding:12px 18px;border:1px solid var(--accent);cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);flex:1;min-width:180px;font-weight:700}
+button.ghost{background:#fff;color:var(--accent)}
+button:disabled{opacity:.6;cursor:wait}
+#msg{margin-top:14px;padding:12px 14px;border-radius:8px;display:none}
+#msg.err{display:block;background:#fbeaea;color:var(--err)}
+#done{display:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px}
+#done h2{margin-top:0;color:var(--ok)}
+#done .num{font-size:1.3rem;font-weight:700;letter-spacing:.03em}
+.sheet{display:none}
+@media (max-width:480px){.row{grid-template-columns:1fr}}
+@media print{
+  @page{size:A4;margin:12mm}
+  body{background:#fff;font-size:10.5pt}
+  main{display:none}
+  .sheet{display:block}
+  .sheet h1{font-size:15pt;margin:0 0 4mm;text-align:center}
+  .sheet .intro{font-size:8.5pt;border:1px solid #999;padding:2mm 3mm;margin-bottom:3mm}
+  .sheet h2{font-size:10.5pt;margin:3mm 0 1mm;border-bottom:1px solid #333}
+  .sheet table{width:100%;border-collapse:collapse}
+  .sheet td,.sheet th{border:1px solid #777;padding:1.6mm 2mm;vertical-align:top;font-size:9.5pt}
+  .sheet th{width:32%;text-align:left;font-weight:600;background:#f2f2f2}
+  .sheet .tall td{height:14mm}
+  .sheet .box{display:inline-block;width:3mm;height:3mm;border:1px solid #333;margin:0 1mm 0 3mm;vertical-align:-0.3mm}
+  .sheet .co th{background:#e6e6e6}
+}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="https://geroyado.github.io/geroyado-tools/">← ポータルに戻る</a>
+  <h1>車両事故報告</h1>
+  <p class="lead">社用車で事故や接触があったときに入力してください。</p>
+
+  <div class="notice">当社は道路交通法第74条の3に基づき安全運転管理者を選任しています。安全運転管理者には、運転者の運転の状況を把握し、安全な運転のために必要な指導を行うことが求められています（道路交通法施行規則第9条の10）。この報告は、その業務の一環として、事故の事実関係を記録し、同様の事故を防ぐための改善策を検討するためのものです。反省や謝罪を求めるものではなく、この報告をもって懲戒処分や損害の負担を直接求めるものではありません。</div>
+
+  <form id="f" novalidate>
+    <fieldset>
+      <legend>1. 基本情報</legend>
+      <div class="row">
+        <label class="f"><span>発生日<em class="req">必須</em></span><input type="date" name="date" required></label>
+        <label class="f"><span>発生時刻</span><input type="time" name="time"></label>
+      </div>
+      <label class="f"><span>運転者（氏名）<em class="req">必須</em></span><input type="text" name="driver" required autocomplete="name"></label>
+      <div class="row">
+        <label class="f"><span>車両<em class="req">必須</em></span>
+          <select name="vehicleSel" required>
+            <option value="">選択してください</option>
+            <option>ハイエース</option>
+            <option value="__other">その他</option>
+          </select>
+        </label>
+        <label class="f" id="vehicleOtherWrap" hidden><span>車両（その他）</span><input type="text" name="vehicleOther"></label>
+      </div>
+      <label class="f"><span>発生場所<em class="req">必須</em></span><input type="text" name="place" required><span class="hint">住所、または施設内の位置（例：本館駐車場の入口付近）</span></label>
+      <div class="row">
+        <label class="f"><span>同乗者</span><input type="text" name="passengers" placeholder="なし／氏名"></label>
+        <label class="f"><span>使用目的</span><input type="text" name="purpose" placeholder="送迎、買い出しなど"></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>2. 状況</legend>
+      <label class="f"><span>事故の形態</span>
+        <select name="type">
+          <option value="">選択してください</option>
+          <option>後退時の接触</option>
+          <option>前進時の接触</option>
+          <option>駐車中の接触</option>
+          <option>走行中の接触</option>
+          <option>その他</option>
+        </select>
+      </label>
+      <label class="f"><span>どのような操作をしていたときに起きたか<em class="req">必須</em></span><textarea name="operation" required placeholder="例：送迎後、駐車場で後退して駐車しようとしていた"></textarea></label>
+      <label class="f"><span>接触したもの</span><input type="text" name="contactWith" placeholder="壁、ポール、他の車など"></label>
+      <label class="f"><span>損傷箇所と程度</span><textarea name="damage" placeholder="例：リアゲート下部にへこみ、リアバンパーに割れ"></textarea></label>
+      <div class="row">
+        <label class="f"><span>人や他人の物への被害</span>
+          <select name="thirdParty"><option>なし</option><option>あり</option><option>不明</option></select>
+        </label>
+        <label class="f"><span>警察への届出</span>
+          <select name="police"><option>なし</option><option>あり</option></select>
+        </label>
+      </div>
+      <p class="hint" style="margin:-6px 0 14px">公道での事故は、物損のみでも警察への届出が必要です（道路交通法第72条）。まだの場合や判断に迷う場合は、すぐに上長に相談してください。</p>
+      <label class="f"><span>写真</span><input type="file" name="photos" accept="image/*" multiple><span class="hint">損傷箇所や現場の写真（6枚まで）。自動で縮小して送ります。</span></label>
+      <div class="thumbs" id="thumbs"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>3. 重なった要因</legend>
+      <p class="hint" style="margin:0 0 12px">事故は、いくつかの要因が重なって起こることがほとんどです。当てはまるものをすべて選んでください。</p>
+      <div class="group"><span>車両</span><div class="chips" data-name="factorVehicle">
+        <label><input type="checkbox" value="死角">死角</label>
+        <label><input type="checkbox" value="センサー・カメラがない">センサー・カメラがない</label>
+        <label><input type="checkbox" value="車体の大きさに不慣れ">車体の大きさに不慣れ</label>
+      </div></div>
+      <div class="group"><span>場所</span><div class="chips" data-name="factorPlace">
+        <label><input type="checkbox" value="狭い">狭い</label>
+        <label><input type="checkbox" value="暗い">暗い</label>
+        <label><input type="checkbox" value="障害物が見えにくい">障害物が見えにくい</label>
+        <label><input type="checkbox" value="普段と違う場所">普段と違う場所</label>
+      </div></div>
+      <div class="group"><span>時間・業務</span><div class="chips" data-name="factorWork">
+        <label><input type="checkbox" value="急いでいた">急いでいた</label>
+        <label><input type="checkbox" value="時間に追われていた">時間に追われていた</label>
+        <label><input type="checkbox" value="他の作業と並行していた">他の作業と並行していた</label>
+      </div></div>
+      <div class="group"><span>天候・時間帯</span><div class="chips" data-name="factorWeather">
+        <label><input type="checkbox" value="雨">雨</label>
+        <label><input type="checkbox" value="雪・凍結">雪・凍結</label>
+        <label><input type="checkbox" value="夜間">夜間</label>
+      </div></div>
+      <label class="f"><span>その他の要因</span><textarea name="factorOther"></textarea></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>4. 発生後の対応</legend>
+      <label class="f"><span>誰に、いつ報告したか</span><input type="text" name="reportedTo" placeholder="例：フロントの〇〇さんに、発生直後に"></label>
+      <label class="f"><span>現場で行ったこと</span><textarea name="actions" placeholder="例：損傷箇所の撮影、相手方への連絡"></textarea></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>5. 防ぐためにできること</legend>
+      <label class="f"><span>自分が今後気をつけられること</span><textarea name="selfPrevention"></textarea></label>
+      <label class="f"><span>誰かに手伝ってもらえばよかったこと</span><textarea name="helpNeeded" placeholder="例：誘導をお願いすればよかった"></textarea></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>6. 会社に改善してほしいこと</legend>
+      <label class="f"><span>車両の装備</span><input type="text" name="reqEquipment" placeholder="バックカメラ、センサーなど"></label>
+      <label class="f"><span>駐車場所・ルール</span><input type="text" name="reqRules"></label>
+      <label class="f"><span>業務の進め方・時間配分</span><input type="text" name="reqWork"></label>
+      <label class="f"><span>その他</span><textarea name="reqOther"></textarea></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>受付控え</legend>
+      <label class="f"><span>メールアドレス</span><input type="email" name="reporterEmail" autocomplete="email"><span class="hint">控えのメールが必要な方のみ入力してください。空欄でも送信できます。</span></label>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit" class="primary" id="send">送信する</button>
+      <button type="button" class="ghost" id="print">印刷用の様式</button>
+    </div>
+    <div id="msg" role="alert"></div>
+  </form>
+
+  <div id="done">
+    <h2>受け付けました</h2>
+    <p>報告ありがとうございます。内容をもとに、会社として改善策を検討します。後日、状況を伺うことがあります。</p>
+    <p>受付番号：<span class="num" id="receipt"></span></p>
+    <p class="hint">控えのメールを希望しなかった方は、この番号を控えておいてください。</p>
+    <div class="actions"><button type="button" class="ghost" onclick="location.reload()">新しい報告を入力する</button></div>
+  </div>
+</main>
+
+<section class="sheet" aria-hidden="true">
+  <h1>車両事故報告書</h1>
+  <div class="intro">当社は道路交通法第74条の3に基づき安全運転管理者を選任しています。安全運転管理者には、運転者の運転の状況を把握し、安全な運転のために必要な指導を行うことが求められています（道路交通法施行規則第9条の10）。この報告は、その業務の一環として、事故の事実関係を記録し、同様の事故を防ぐための改善策を検討するためのものです。反省や謝罪を求めるものではなく、この報告をもって懲戒処分や損害の負担を直接求めるものではありません。</div>
+  <h2>1. 基本情報</h2>
+  <table>
+    <tr><th>発生日時</th><td>　　　年　　月　　日（　）　　時　　分ごろ</td></tr>
+    <tr><th>発生場所</th><td></td></tr>
+    <tr><th>運転者</th><td></td></tr>
+    <tr><th>車両</th><td><span class="box"></span>ハイエース<span class="box"></span>その他（　　　　　　　）</td></tr>
+    <tr><th>同乗者</th><td></td></tr>
+    <tr><th>使用目的</th><td></td></tr>
+  </table>
+  <h2>2. 状況</h2>
+  <table>
+    <tr><th>事故の形態</th><td><span class="box"></span>後退時<span class="box"></span>前進時<span class="box"></span>駐車中<span class="box"></span>走行中<span class="box"></span>その他</td></tr>
+    <tr class="tall"><th>どのような操作をしていたときに起きたか</th><td></td></tr>
+    <tr><th>接触したもの</th><td></td></tr>
+    <tr class="tall"><th>損傷箇所と程度</th><td></td></tr>
+    <tr><th>人や他人の物への被害</th><td><span class="box"></span>なし<span class="box"></span>あり<span class="box"></span>不明</td></tr>
+    <tr><th>警察への届出</th><td><span class="box"></span>なし<span class="box"></span>あり<br><small>公道での事故は、物損のみでも警察への届出が必要です（道路交通法第72条）。まだの場合や判断に迷う場合は、すぐに上長に相談してください。</small></td></tr>
+  </table>
+  <h2>3. 重なった要因（当てはまるものに✓）</h2>
+  <table>
+    <tr><th>車両</th><td><span class="box"></span>死角<span class="box"></span>センサー・カメラがない<span class="box"></span>車体の大きさに不慣れ</td></tr>
+    <tr><th>場所</th><td><span class="box"></span>狭い<span class="box"></span>暗い<span class="box"></span>障害物が見えにくい<span class="box"></span>普段と違う場所</td></tr>
+    <tr><th>時間・業務</th><td><span class="box"></span>急いでいた<span class="box"></span>時間に追われていた<span class="box"></span>他の作業と並行</td></tr>
+    <tr><th>天候・時間帯</th><td><span class="box"></span>雨<span class="box"></span>雪・凍結<span class="box"></span>夜間</td></tr>
+    <tr><th>その他</th><td></td></tr>
+  </table>
+  <h2>4. 発生後の対応</h2>
+  <table>
+    <tr><th>誰に、いつ報告したか</th><td></td></tr>
+    <tr><th>現場で行ったこと</th><td></td></tr>
+  </table>
+  <h2>5. 防ぐためにできること</h2>
+  <table>
+    <tr class="tall"><th>自分が今後気をつけられること</th><td></td></tr>
+    <tr><th>誰かに手伝ってもらえばよかったこと</th><td></td></tr>
+  </table>
+  <h2>6. 会社に改善してほしいこと</h2>
+  <table>
+    <tr><th>車両の装備</th><td></td></tr>
+    <tr><th>駐車場所・ルール</th><td></td></tr>
+    <tr><th>業務の進め方・時間配分</th><td></td></tr>
+    <tr><th>その他</th><td></td></tr>
+  </table>
+  <h2>7. 会社記入欄</h2>
+  <table class="co">
+    <tr><th>受付日・聞き取り日・聞き取り者</th><td></td></tr>
+    <tr class="tall"><th>会社として実施する改善策</th><td></td></tr>
+    <tr><th>担当者・期限</th><td></td></tr>
+  </table>
+</section>
+
+<script>
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyhkgcPFCNfO7SC-qVB2Z7JjkcWsTTuwoV95DLJyDuTCiVTE0XVGZGCi-rJI8f3bfnduQ/exec';
+const TOKEN = 'tmjJZ0KiCze2yugQk-6zccY4';
+const MAX_PHOTOS = 6, MAX_EDGE = 1600, QUALITY = 0.8;
+
+const f = document.getElementById('f');
+const msg = document.getElementById('msg');
+const send = document.getElementById('send');
+let photos = [];
+
+f.date.value = new Date(Date.now() + 9*3600e3).toISOString().slice(0,10);
+
+f.vehicleSel.addEventListener('change', () => {
+  document.getElementById('vehicleOtherWrap').hidden = f.vehicleSel.value !== '__other';
+});
+
+f.photos.addEventListener('change', async () => {
+  const files = Array.from(f.photos.files).slice(0, MAX_PHOTOS);
+  const box = document.getElementById('thumbs');
+  box.innerHTML = '';
+  photos = [];
+  for (const file of files) {
+    try {
+      const dataUrl = await shrink(file);
+      photos.push({ name: file.name.replace(/\.[^.]+$/, '') + '.jpg', type: 'image/jpeg', data: dataUrl.split(',')[1] });
+      const img = document.createElement('img'); img.src = dataUrl; box.appendChild(img);
+    } catch (e) { showErr('写真を読み込めませんでした：' + file.name); }
+  }
+});
+
+function shrink(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, MAX_EDGE / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', QUALITY));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+function checked(name) {
+  return Array.from(document.querySelectorAll('[data-name="' + name + '"] input:checked')).map(i => i.value);
+}
+
+function showErr(t) { msg.textContent = t; msg.className = 'err'; msg.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+
+document.getElementById('print').addEventListener('click', () => window.print());
+
+f.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  msg.className = ''; msg.textContent = '';
+  const v = (n) => (f[n].value || '').trim();
+  const vehicle = f.vehicleSel.value === '__other' ? (v('vehicleOther') || 'その他') : f.vehicleSel.value;
+  const missing = [];
+  if (!v('date')) missing.push('発生日');
+  if (!v('driver')) missing.push('運転者');
+  if (!vehicle) missing.push('車両');
+  if (!v('place')) missing.push('発生場所');
+  if (!v('operation')) missing.push('どのような操作をしていたか');
+  if (missing.length) { showErr('次の項目を入力してください：' + missing.join('、')); return; }
+
+  const payload = {
+    token: TOKEN,
+    date: v('date'), time: v('time'), driver: v('driver'), vehicle,
+    place: v('place'), passengers: v('passengers'), purpose: v('purpose'),
+    type: v('type'), operation: v('operation'), contactWith: v('contactWith'), damage: v('damage'),
+    thirdParty: v('thirdParty'), police: v('police'),
+    factorVehicle: checked('factorVehicle'), factorPlace: checked('factorPlace'),
+    factorWork: checked('factorWork'), factorWeather: checked('factorWeather'), factorOther: v('factorOther'),
+    reportedTo: v('reportedTo'), actions: v('actions'),
+    selfPrevention: v('selfPrevention'), helpNeeded: v('helpNeeded'),
+    reqEquipment: v('reqEquipment'), reqRules: v('reqRules'), reqWork: v('reqWork'), reqOther: v('reqOther'),
+    reporterEmail: v('reporterEmail'),
+    photos
+  };
+
+  send.disabled = true; send.textContent = '送信しています…';
+  try {
+    const res = await fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '送信に失敗しました。');
+    document.getElementById('receipt').textContent = data.receiptId;
+    f.hidden = true;
+    document.querySelector('.notice').hidden = true;
+    document.getElementById('done').style.display = 'block';
+    window.scrollTo({ top: 0 });
+  } catch (err) {
+    showErr('送信できませんでした。時間をおいて再度お試しください。続けて失敗する場合は、印刷用の様式に記入して提出してください。（' + err.message + '）');
+    send.disabled = false; send.textContent = '送信する';
+  }
+});
+</script>
+</body>
+</html>
