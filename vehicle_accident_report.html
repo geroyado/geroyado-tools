@@ -12,7 +12,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans",
 main{max-width:720px;margin:0 auto;padding:16px 16px 48px}
 .back{display:inline-block;color:var(--accent);text-decoration:none;font-size:.9rem;margin-bottom:4px}
 h1{font-size:1.4rem;margin:8px 0 4px}
-.lead{color:var(--sub);font-size:.9rem;margin:0 0 16px}
+.lead{color:var(--sub);font-size:.9rem;margin:0}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin:0 0 16px}
+button.small{padding:8px 14px;font-size:.88rem}
 .notice{background:var(--note);border-left:4px solid var(--accent);padding:12px 14px;border-radius:6px;font-size:.92rem;margin-bottom:20px}
 fieldset{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px 6px;margin:0 0 16px}
 legend{font-weight:700;padding:0 6px;font-size:1.05rem}
@@ -63,7 +65,7 @@ button:disabled{opacity:.6;cursor:wait}
 <main>
   <a class="back" href="https://geroyado.github.io/geroyado-tools/">← ポータルに戻る</a>
   <h1>車両事故報告</h1>
-  <p class="lead">社用車で事故や接触があったときに入力してください。</p>
+  <div class="top"><p class="lead">社用車で事故や接触があったときに入力してください。</p><button type="button" class="ghost small print">紙で提出する方：印刷用の様式</button></div>
 
   <div class="notice">当社は道路交通法第74条の3に基づき安全運転管理者を選任しています。安全運転管理者には、運転者の運転の状況を把握し、安全な運転のために必要な指導を行うことが求められています（道路交通法施行規則第9条の10）。この報告は、その業務の一環として、事故の事実関係を記録し、同様の事故を防ぐための改善策を検討するためのものです。反省や謝罪を求めるものではなく、この報告をもって懲戒処分や損害の負担を直接求めるものではありません。</div>
 
@@ -174,7 +176,7 @@ button:disabled{opacity:.6;cursor:wait}
 
     <div class="actions">
       <button type="submit" class="primary" id="send">送信する</button>
-      <button type="button" class="ghost" id="print">印刷用の様式</button>
+      <button type="button" class="ghost print">印刷用の様式</button>
     </div>
     <div id="msg" role="alert"></div>
   </form>
@@ -295,7 +297,7 @@ function checked(name) {
 
 function showErr(t) { msg.textContent = t; msg.className = 'err'; msg.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 
-document.getElementById('print').addEventListener('click', () => window.print());
+document.querySelectorAll('button.print').forEach(b => b.addEventListener('click', () => window.print()));
 
 f.addEventListener('submit', async (e) => {
   e.preventDefault();
